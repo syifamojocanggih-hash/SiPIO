@@ -10,7 +10,15 @@ import { FeedLogs } from './components/FeedLogs'
 import { SettingsModal } from './components/SettingsModal'
 import { MobileBottomNav } from './components/MobileBottomNav'
 import { PWAInstallModal } from './components/PWAInstallModal'
+import { SimulationBar } from './components/SimulationBar'
 import { usePWA } from './hooks/usePWA'
+import {
+  INITIAL_TELEMETRY,
+  INITIAL_THRESHOLDS,
+  INITIAL_SCHEDULES,
+  INITIAL_FEED_LOGS,
+  INITIAL_TEMP_HISTORY
+} from './data/mockIoT'
 
 export default function App() {
   // Theme state: 'light' by default for optimal outdoor sunlight readability (SiPIO White & Blue)
@@ -32,60 +40,23 @@ export default function App() {
   })
 
   // Telemetry (PRD Section 11 & 13)
-  const [telemetry, setTelemetry] = useState({
-    temp: 28.4,
-    level_ok: true,
-    rssi: -61,
-    timestamp: Date.now()
-  })
+  const [telemetry, setTelemetry] = useState(INITIAL_TELEMETRY)
 
   // System Thresholds (PRD Section 13.1)
-  const [thresholds, setThresholds] = useState({
-    temp_min: 24,
-    temp_max: 32,
-    min_gap_min: 30,
-    default_duration_ms: 2000,
-    offline_after_s: 60,
-    camera_interval_s: 300
-  })
+  const [thresholds, setThresholds] = useState(INITIAL_THRESHOLDS)
 
   // Schedules (PRD Section 13 & D-04)
-  const [schedules, setSchedules] = useState([
-    { id: 1, time: '07:00', duration_ms: 2000, days: 'Setiap Hari', enabled: true, synced: true },
-    { id: 2, time: '17:00', duration_ms: 2000, days: 'Setiap Hari', enabled: true, synced: true }
-  ])
+  const [schedules, setSchedules] = useState(INITIAL_SCHEDULES)
 
   // Feed Logs (PRD Section 13 & D-05)
-  const [feedLogs, setFeedLogs] = useState([
-    {
-      id: 101,
-      timestamp: '14 Okt 2026 07:00:03',
-      source: 'Jadwal Otomatis',
-      duration_ms: 2000,
-      result: 'done',
-      reason: 'Selesai tepat waktu (deviasi < 30s)'
-    },
-    {
-      id: 102,
-      timestamp: '14 Okt 2026 12:15:10',
-      source: 'Manual (Dashboard)',
-      duration_ms: 2000,
-      result: 'done',
-      reason: 'Diberikan manual via tombol'
-    },
-    {
-      id: 103,
-      timestamp: '14 Okt 2026 14:02:45',
-      source: 'Manual (Dashboard)',
-      duration_ms: 1000,
-      result: 'skipped',
-      reason: 'Jeda belum cukup (< 30 menit)'
-    }
-  ])
+  const [feedLogs, setFeedLogs] = useState(INITIAL_FEED_LOGS)
+
+  // Temperature Historical Dataset (D-02)
+  const [tempHistory, setTempHistory] = useState(INITIAL_TEMP_HISTORY)
 
   // Last feed info
   const lastFeed = feedLogs.length > 0 ? {
-    time: feedLogs[0].timestamp.split(' ')[2] || '07:00',
+    time: feedLogs[0].timestamp.split(' ')[2] || feedLogs[0].timestamp || '07:00',
     relative: 'Terkini',
     source: feedLogs[0].source,
     duration_ms: feedLogs[0].duration_ms,
@@ -174,6 +145,19 @@ export default function App() {
     setFeedLogs((prev) => [newEntry, ...prev])
   }
 
+  // Handler to reset all simulation data back to initial state
+  const handleResetData = () => {
+    setTelemetry(INITIAL_TELEMETRY)
+    setEspStatus({ online: true, rssi: -61 })
+    setCamStatus({ online: true })
+    setThresholds(INITIAL_THRESHOLDS)
+    setSchedules(INITIAL_SCHEDULES)
+    setFeedLogs(INITIAL_FEED_LOGS)
+    setTempHistory(INITIAL_TEMP_HISTORY)
+    setDismissedAlertIds([])
+    pwaState.triggerHaptic(50)
+  }
+
   return (
     <div className="app-container">
       {/* 1. Header & Top Bar with Connectivity and PWA Installer */}
@@ -184,6 +168,19 @@ export default function App() {
         pwaState={pwaState}
         espStatus={espStatus}
         camStatus={camStatus}
+      />
+
+      {/* 1.5 Interactive Browser Simulation Bar for Testing IoT States */}
+      <SimulationBar
+        telemetry={telemetry}
+        setTelemetry={setTelemetry}
+        espStatus={espStatus}
+        setEspStatus={setEspStatus}
+        camStatus={camStatus}
+        setCamStatus={setCamStatus}
+        onTriggerFeed={handleTriggerFeed}
+        onResetData={handleResetData}
+        triggerHaptic={pwaState.triggerHaptic}
       />
 
       {/* 2. Alert Banner (D-07) */}
@@ -229,7 +226,7 @@ export default function App() {
           <CameraMonitor camStatus={camStatus} />
 
           {/* Temperature Trend Analytics (DS18B20) */}
-          <TempChart thresholds={thresholds} />
+          <TempChart historyData={tempHistory} thresholds={thresholds} />
         </div>
       </div>
 

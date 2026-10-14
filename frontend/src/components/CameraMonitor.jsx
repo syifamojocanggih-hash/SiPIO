@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Camera, RefreshCw, Maximize2, Eye, Sparkles, X } from 'lucide-react'
+import { Camera, CameraOff, RefreshCw, Maximize2, Eye, Sparkles, X } from 'lucide-react'
 
 export function CameraMonitor({ camStatus }) {
   const [activeArea, setActiveArea] = useState('kolam') // 'kolam' | 'hopper'
@@ -89,7 +89,10 @@ export function CameraMonitor({ camStatus }) {
           src={currentImageSrc} 
           alt={activeArea === 'kolam' ? 'Snapshot permukaan air kolam dari ESP32-CAM' : 'Snapshot isi wadah pakan hopper dari ESP32-CAM'} 
           className="camera-img"
-          style={{ opacity: isRefreshing ? 0.7 : 1 }}
+          style={{ 
+            opacity: isRefreshing ? 0.7 : camStatus.online ? 1 : 0.4,
+            filter: camStatus.online ? 'none' : 'grayscale(80%)'
+          }}
         />
 
         {/* Status badges */}
@@ -99,8 +102,19 @@ export function CameraMonitor({ camStatus }) {
         </div>
 
         <div className="camera-timestamp-badge">
-          Diambil: {lastUpdated}
+          {camStatus.online ? `Diambil: ${lastUpdated}` : 'Kamera Terputus (Offline)'}
         </div>
+
+        {/* Offline Warning Overlay (R-27 UI State) */}
+        {!camStatus.online && (
+          <div className="camera-offline-overlay" role="alert">
+            <CameraOff size={32} style={{ color: 'var(--status-rose)', marginBottom: '8px' }} />
+            <strong style={{ fontSize: '0.95rem' }}>ESP32-CAM Sedang Offline</strong>
+            <p style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '4px', textAlign: 'center', maxWidth: '300px' }}>
+              Snapshot di atas adalah tangkapan terakhir. Periksa catu daya 5V dan sinyal WiFi modul kamera.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="camera-action-bar">
