@@ -5,7 +5,8 @@ export function useIoTConnection({
   onTelemetryUpdate,
   onFeedEvent,
   onSchedulesUpdate,
-  onThresholdsUpdate
+  onThresholdsUpdate,
+  onCameraUpdate
 }) {
   const [isConnected, setIsConnected] = useState(false)
   const [backendOnline, setBackendOnline] = useState(false)
@@ -77,6 +78,10 @@ export function useIoTConnection({
           } else if (msg.type === 'thresholds_updated' && msg.data) {
             if (onThresholdsUpdate) {
               onThresholdsUpdate(msg.data)
+            }
+          } else if (msg.type === 'camera_updated' && msg.data) {
+            if (onCameraUpdate) {
+              onCameraUpdate(msg.data)
             }
           }
         } catch (err) {

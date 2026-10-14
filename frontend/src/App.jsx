@@ -14,6 +14,7 @@ import { MobileInstallBanner } from './components/MobileInstallBanner'
 import { SimulationBar } from './components/SimulationBar'
 import { usePWA } from './hooks/usePWA'
 import { useIoTConnection } from './hooks/useIoTConnection'
+import { api } from './services/api'
 import {
   INITIAL_TELEMETRY,
   INITIAL_THRESHOLDS,
@@ -56,6 +57,9 @@ export default function App() {
   // Temperature Historical Dataset (D-02)
   const [tempHistory, setTempHistory] = useState(INITIAL_TEMP_HISTORY)
 
+  // Real-time camera snapshot updates from ESP32-CAM
+  const [cameraUpdate, setCameraUpdate] = useState(null)
+
   // Real-time FastAPI WebSocket & MQTT Bridge Connection
   const handleTelemetryUpdate = useCallback((newTelem) => {
     setTelemetry((prev) => ({
@@ -85,12 +89,51 @@ export default function App() {
     setThresholds(newThresholds)
   }, [])
 
+  const handleCameraUpdate = useCallback((camData) => {
+    setCameraUpdate(camData)
+    setCamStatus({ online: true })
+  }, [])
+
   const iotConnection = useIoTConnection({
     onTelemetryUpdate: handleTelemetryUpdate,
     onFeedEvent: handleFeedEvent,
     onSchedulesUpdate: handleSchedulesUpdate,
-    onThresholdsUpdate: handleThresholdsUpdate
+    onThresholdsUpdate: handleThresholdsUpdate,
+    onCameraUpdate: handleCameraUpdate
   })
+
+  // Sinkronisasi data awal dari database MySQL / FastAPI backend saat terhubung
+  useEffect(() => {
+    if (!iotConnection.backendOnline) return
+
+    // 1. Ambil riwayat tren suhu air dari database
+    api.getTelemetryHistory().then((hist) => {
+      if (hist && (hist['1h'] || hist['24h'] || hist['7d'])) {
+        setTempHistory(hist)
+      }
+    }).catch(() => {})
+
+    // 2. Ambil jadwal pakan aktif
+    api.getSchedules().then((scheds) => {
+      if (Array.isArray(scheds) && scheds.length > 0) {
+        setSchedules(scheds)
+      }
+    }).catch(() => {})
+
+    // 3. Ambil log riwayat pakan
+    api.getLogs().then((logs) => {
+      if (Array.isArray(logs) && logs.length > 0) {
+        setFeedLogs(logs)
+      }
+    }).catch(() => {})
+
+    // 4. Ambil ambang batas sistem
+    api.getThresholds().then((th) => {
+      if (th && th.temp_min !== undefined) {
+        setThresholds(th)
+      }
+    }).catch(() => {})
+  }, [iotConnection.backendOnline])
 
   // Last feed info
   const lastFeed = feedLogs.length > 0 ? {
@@ -295,7 +338,7 @@ export default function App() {
         {/* Right Column: Camera Monitor (D-10) & Temperature Analytics (D-02) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Camera Monitor Panel (ESP32-CAM) */}
-          <CameraMonitor camStatus={camStatus} />
+          <CameraMonitor camStatus={camStatus} cameraUpdate={cameraUpdate} />
 
           {/* Temperature Trend Analytics (DS18B20) */}
           <TempChart historyData={tempHistory} thresholds={thresholds} />

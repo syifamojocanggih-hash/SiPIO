@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from 'react'
 import { Camera, CameraOff, RefreshCw, Maximize2, Eye, Sparkles, X } from 'lucide-react'
 
-export function CameraMonitor({ camStatus }) {
+export function CameraMonitor({ camStatus, cameraUpdate }) {
   const [activeArea, setActiveArea] = useState('kolam') // 'kolam' | 'hopper'
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showFullView, setShowFullView] = useState(false)
   const [lastUpdated, setLastUpdated] = useState('18:45 WIB')
+  const [cacheBuster, setCacheBuster] = useState(Date.now())
+
+  // Listen to realtime camera uploads from ESP32-CAM via WebSocket
+  useEffect(() => {
+    if (cameraUpdate && cameraUpdate.timestamp_str) {
+      setLastUpdated(cameraUpdate.timestamp_str)
+      setCacheBuster(cameraUpdate.timestamp || Date.now())
+    }
+  }, [cameraUpdate])
 
   // Keyboard accessibility: Escape closes modal (R-32)
   useEffect(() => {
@@ -25,12 +34,14 @@ export function CameraMonitor({ camStatus }) {
       setIsRefreshing(false)
       const now = new Date()
       setLastUpdated(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} WIB`)
+      setCacheBuster(Date.now())
     }, 800)
   }
 
-  const currentImageSrc = activeArea === 'kolam' 
+  const baseSrc = activeArea === 'kolam' 
     ? '/camera/pond_latest.jpg' 
     : '/camera/hopper_latest.jpg'
+  const currentImageSrc = `${baseSrc}?t=${cacheBuster}`
 
   return (
     <article id="sec-camera" className="card camera-container">

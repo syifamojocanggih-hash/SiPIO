@@ -100,5 +100,34 @@ export const api = {
   // 6. Audit Trail Logs
   async getLogs() {
     return fetchJson('/logs')
+  },
+
+  // 7. Telemetry History (DS18B20 Temperature Curves for 1h, 24h, 7d)
+  async getTelemetryHistory(range = 'all') {
+    return fetchJson(`/telemetry/history?range=${encodeURIComponent(range)}`)
+  },
+
+  // 8. Camera Status & Upload (ESP32-CAM)
+  async getCameraStatus() {
+    return fetchJson('/camera/latest')
+  },
+
+  async uploadCameraPhoto(file, area = 'kolam') {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('area', area)
+
+    const url = `${API_BASE}/camera/upload`
+    const res = await fetch(url, {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!res.ok) {
+      const errorBody = await res.json().catch(() => ({}))
+      throw new Error(errorBody.detail || `Upload failed: ${res.statusText}`)
+    }
+
+    return await res.json()
   }
 }

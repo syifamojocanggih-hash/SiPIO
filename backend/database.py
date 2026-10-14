@@ -149,5 +149,37 @@ def init_db():
             ]
             db.add_all(logs)
             db.commit()
+
+        # 4. Seed Telemetry Logs Awal jika belum ada (untuk grafik tren suhu)
+        if db.query(TelemetryLogModel).count() == 0:
+            now_ms = int(time.time() * 1000)
+            telemetry_entries = []
+            
+            # 7 hari terakhir (1 data per hari)
+            past_temps_7d = [27.8, 28.2, 28.9, 29.4, 28.6, 28.0, 28.4]
+            for day_offset, temp_val in enumerate(past_temps_7d):
+                t_stamp = now_ms - ((7 - day_offset) * 86400 * 1000)
+                telemetry_entries.append(
+                    TelemetryLogModel(temp=temp_val, level_ok=True, rssi=-63, timestamp=t_stamp)
+                )
+
+            # 24 jam terakhir (setiap 3 jam)
+            past_temps_24h = [26.2, 25.8, 26.5, 27.9, 30.4, 29.8, 28.7, 28.1]
+            for hour_offset, temp_val in enumerate(past_temps_24h):
+                t_stamp = now_ms - ((8 - hour_offset) * 3 * 3600 * 1000)
+                telemetry_entries.append(
+                    TelemetryLogModel(temp=temp_val, level_ok=True, rssi=-61, timestamp=t_stamp)
+                )
+
+            # 1 jam terakhir (setiap 10 menit)
+            past_temps_1h = [28.3, 28.4, 28.5, 28.4, 28.3, 28.4]
+            for min_offset, temp_val in enumerate(past_temps_1h):
+                t_stamp = now_ms - ((6 - min_offset) * 10 * 60 * 1000)
+                telemetry_entries.append(
+                    TelemetryLogModel(temp=temp_val, level_ok=True, rssi=-60, timestamp=t_stamp)
+                )
+
+            db.add_all(telemetry_entries)
+            db.commit()
     finally:
         db.close()

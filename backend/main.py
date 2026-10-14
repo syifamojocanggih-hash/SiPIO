@@ -4,10 +4,15 @@ import logging
 import os
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, status, Depends
+from fastapi import (
+    FastAPI, WebSocket, WebSocketDisconnect, HTTPException,
+    status, Depends, UploadFile, File, Form, Query
+)
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 import paho.mqtt.client as mqtt
 from sqlalchemy.orm import Session
@@ -16,6 +21,14 @@ from database import (
     init_db, get_db, SessionLocal,
     TelemetryLogModel, FeedLogModel, ScheduleModel, ThresholdModel
 )
+
+# Setup direktori penyimpanan foto ESP32-CAM
+BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_CAMERA_DIR = BASE_DIR.parent / "frontend" / "public" / "camera"
+BACKEND_STATIC_CAMERA_DIR = BASE_DIR / "static" / "camera"
+
+FRONTEND_CAMERA_DIR.mkdir(parents=True, exist_ok=True)
+BACKEND_STATIC_CAMERA_DIR.mkdir(parents=True, exist_ok=True)
 
 # Configure logging
 logging.basicConfig(
@@ -170,6 +183,20 @@ def on_mqtt_message(client, userdata, msg):
             current_telemetry.level_ok = bool(payload.get("level_ok", current_telemetry.level_ok))
             current_telemetry.rssi = int(payload.get("rssi", current_telemetry.rssi))
             current_telemetry.timestamp = int(time.time() * 1000)
+
+            # Rekam pembacaan sensor ke database MySQL/SQLite
+            try:
+                with SessionLocal() as db_session:
+                    db_session.add(TelemetryLogModel(
+                        temp=current_telemetry.temp,
+                        level_ok=current_telemetry.level_ok,
+                        rssi=current_telemetry.rssi,
+                        timestamp=current_telemetry.timestamp
+                    ))
+                    db_session.commit()
+            except Exception as db_err:
+                logger.warning(f"Gagal mencatat telemetri MQTT ke database: {db_err}")
+
         elif topic == TOPIC_FEEDER_STATUS:
             current_telemetry.esp_online = (payload_str.lower() == "online")
         elif topic == TOPIC_CAM_STATUS:
@@ -189,15 +216,31 @@ if MQTT_USERNAME and MQTT_PASSWORD:
 # Background Periodic Telemetry & Simulation Task
 # -------------------------------------------------------------
 async def periodic_telemetry_loop():
-    """Background task yang menyiarkan telemetri realtime via WebSocket ke frontend"""
+    """Background task yang menyiarkan telemetri realtime via WebSocket ke frontend dan mencatat riwayat ke DB"""
+    tick = 0
     while True:
         try:
+            tick += 1
             # Jika tidak terhubung ke broker MQTT riil, lakukan mikro-fluktuasi simulasi realistis
             if not mqtt_connected:
                 delta = (hash(str(time.time())) % 20 - 10) * 0.015
                 new_temp = round(max(22.0, min(35.0, current_telemetry.temp + delta)), 1)
                 current_telemetry.temp = new_temp
                 current_telemetry.timestamp = int(time.time() * 1000)
+
+            # Catat ke database setiap 10 siklus (sekitar setiap 30 detik)
+            if tick % 10 == 0:
+                try:
+                    with SessionLocal() as db_session:
+                        db_session.add(TelemetryLogModel(
+                            temp=current_telemetry.temp,
+                            level_ok=current_telemetry.level_ok,
+                            rssi=current_telemetry.rssi,
+                            timestamp=current_telemetry.timestamp
+                        ))
+                        db_session.commit()
+                except Exception as log_err:
+                    logger.warning(f"Gagal mencatat riwayat telemetri berkala ke DB: {log_err}")
 
             # Broadcast telemetri ke semua WebSocket dashboard yang aktif
             await ws_manager.broadcast({
@@ -266,6 +309,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount direktori foto kamera agar dapat diakses statis (misal http://localhost:8000/camera/pond_latest.jpg)
+app.mount("/camera", StaticFiles(directory=str(FRONTEND_CAMERA_DIR)), name="camera")
+
 # -------------------------------------------------------------
 # REST API Endpoints
 # -------------------------------------------------------------
@@ -308,6 +354,95 @@ def get_health():
 @app.get("/api/telemetry", response_model=TelemetryData)
 def get_telemetry():
     return current_telemetry
+
+@app.get("/api/telemetry/history")
+def get_telemetry_history(
+    range: Optional[str] = Query("all", description="Rentang waktu: '1h', '24h', '7d', atau 'all'"),
+    db: Session = Depends(get_db)
+):
+    """Mengembalikan riwayat tren suhu air DS18B20 dari database MySQL/SQLite untuk grafik dashboard"""
+    now_ms = int(time.time() * 1000)
+    one_hour_ago = now_ms - (3600 * 1000)
+    twenty_four_hours_ago = now_ms - (24 * 3600 * 1000)
+    seven_days_ago = now_ms - (7 * 24 * 3600 * 1000)
+
+    # Ambil log dari database urut berdasarkan waktu
+    all_logs = db.query(TelemetryLogModel).filter(
+        TelemetryLogModel.timestamp >= seven_days_ago
+    ).order_by(TelemetryLogModel.timestamp.asc()).all()
+
+    # 1. 1 Jam Terakhir (1h)
+    data_1h = []
+    logs_1h = [l for l in all_logs if l.timestamp >= one_hour_ago]
+    step_1h = max(1, len(logs_1h) // 8) if len(logs_1h) > 8 else 1
+    for l in logs_1h[::step_1h]:
+        t_struct = time.localtime(l.timestamp / 1000)
+        data_1h.append({
+            "time": time.strftime("%H:%M", t_struct),
+            "temp": round(l.temp, 1)
+        })
+
+    # 2. 24 Jam Terakhir (24h)
+    data_24h = []
+    logs_24h = [l for l in all_logs if l.timestamp >= twenty_four_hours_ago]
+    step_24h = max(1, len(logs_24h) // 10) if len(logs_24h) > 10 else 1
+    for l in logs_24h[::step_24h]:
+        t_struct = time.localtime(l.timestamp / 1000)
+        data_24h.append({
+            "time": time.strftime("%H:%M", t_struct),
+            "temp": round(l.temp, 1)
+        })
+
+    # 3. 7 Hari Terakhir (7d)
+    data_7d = []
+    day_map = {
+        "Monday": "Senin", "Tuesday": "Selasa", "Wednesday": "Rabu",
+        "Thursday": "Kamis", "Friday": "Jumat", "Saturday": "Sabtu", "Sunday": "Minggu"
+    }
+    daily_groups = {}
+    for l in all_logs:
+        t_struct = time.localtime(l.timestamp / 1000)
+        day_name = day_map.get(time.strftime("%A", t_struct), time.strftime("%A", t_struct))
+        day_key = (time.strftime("%Y-%m-%d", t_struct), day_name)
+        daily_groups.setdefault(day_key, []).append(l.temp)
+
+    for (date_str, day_name), temps in list(daily_groups.items())[-7:]:
+        avg_t = round(sum(temps) / len(temps), 1)
+        data_7d.append({
+            "time": day_name,
+            "temp": avg_t
+        })
+
+    # Fallback jika data masih sedikit
+    if len(data_1h) == 0:
+        for m in [50, 40, 30, 20, 10, 0]:
+            ts = now_ms - (m * 60 * 1000)
+            data_1h.append({
+                "time": time.strftime("%H:%M", time.localtime(ts / 1000)),
+                "temp": round(current_telemetry.temp + (m % 3 * 0.1 - 0.1), 1)
+            })
+    if len(data_24h) == 0:
+        for h in [21, 18, 15, 12, 9, 6, 3, 0]:
+            ts = now_ms - (h * 3600 * 1000)
+            data_24h.append({
+                "time": time.strftime("%H:00", time.localtime(ts / 1000)),
+                "temp": round(26.0 + ((h * 7) % 5) * 0.8, 1)
+            })
+    if len(data_7d) == 0:
+        days_id = ["Kamis", "Jumat", "Sabtu", "Minggu", "Senin", "Selasa", "Rabu"]
+        temps = [27.8, 28.2, 28.9, 29.4, 28.6, 28.0, 28.4]
+        for d, tp in zip(days_id, temps):
+            data_7d.append({"time": d, "temp": tp})
+
+    response_payload = {
+        "1h": data_1h,
+        "24h": data_24h,
+        "7d": data_7d
+    }
+
+    if range and range in response_payload:
+        return response_payload[range]
+    return response_payload
 
 @app.post("/api/feed")
 async def trigger_feeding(req: FeedRequest, db: Session = Depends(get_db)):
@@ -385,6 +520,116 @@ async def trigger_feeding(req: FeedRequest, db: Session = Depends(get_db)):
         "success": True,
         "message": f"Perintah pakan {req.duration_ms}ms berhasil dikirim ke feeder",
         "log": log_entry
+    }
+
+# -------------------------------------------------------------
+# ESP32-CAM Snapshot Endpoints
+# -------------------------------------------------------------
+@app.post("/api/camera/upload")
+async def upload_camera_image(
+    file: UploadFile = File(..., description="File foto JPEG dari ESP32-CAM"),
+    area: str = Form("kolam", description="Area pemantauan: 'kolam' (permukaan kolam) atau 'hopper' (wadah pakan)")
+):
+    """
+    Menerima unggahan foto snapshot dari ESP32-CAM secara periodik atau on-demand.
+    Menyimpan foto terbaru dan menyiarkan notifikasi pembaruan ke seluruh client WebSocket.
+    """
+    allowed_exts = (".jpg", ".jpeg", ".png")
+    is_valid_type = (file.content_type in ["image/jpeg", "image/jpg", "image/png"]) or any(
+        file.filename.lower().endswith(ext) for ext in allowed_exts
+    )
+    if not is_valid_type:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Format file tidak didukung ({file.content_type}). Harap unggah format JPEG/PNG."
+        )
+
+    area_clean = "hopper" if "hopper" in area.lower() else "kolam"
+    target_filename = "hopper_latest.jpg" if area_clean == "hopper" else "pond_latest.jpg"
+
+    contents = await file.read()
+    if len(contents) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File foto kosong (0 bytes)."
+        )
+
+    # Simpan ke frontend/public/camera/
+    dest_frontend = FRONTEND_CAMERA_DIR / target_filename
+    with open(dest_frontend, "wb") as f:
+        f.write(contents)
+
+    # Salin ke backend/static/camera/ sebagai arsip
+    dest_backend = BACKEND_STATIC_CAMERA_DIR / target_filename
+    try:
+        with open(dest_backend, "wb") as f:
+            f.write(contents)
+    except Exception as e:
+        logger.warning(f"Gagal menyalin foto ke arsip backend: {e}")
+
+    # Set status modul kamera online
+    current_telemetry.cam_online = True
+    now_ms = int(time.time() * 1000)
+    time_str = time.strftime("%H:%M WIB")
+    img_url = f"/camera/{target_filename}?t={now_ms}"
+
+    # Siarkan event foto baru via WebSocket ke seluruh dashboard client
+    await ws_manager.broadcast({
+        "type": "camera_updated",
+        "data": {
+            "area": area_clean,
+            "filename": target_filename,
+            "url": img_url,
+            "size_bytes": len(contents),
+            "timestamp": now_ms,
+            "timestamp_str": time_str
+        }
+    })
+
+    logger.info(f"Foto ESP32-CAM ({area_clean}) diterima: {len(contents)} bytes -> {target_filename}")
+
+    return {
+        "success": True,
+        "message": f"Foto {area_clean} berhasil diunggah dan diperbarui",
+        "data": {
+            "area": area_clean,
+            "filename": target_filename,
+            "url": img_url,
+            "size_bytes": len(contents),
+            "timestamp_str": time_str
+        }
+    }
+
+@app.get("/api/camera/latest")
+def get_latest_camera_status():
+    """Mengembalikan status foto terbaru dari kedua area pemantauan"""
+    kolam_path = FRONTEND_CAMERA_DIR / "pond_latest.jpg"
+    hopper_path = FRONTEND_CAMERA_DIR / "hopper_latest.jpg"
+
+    def get_info(path, area, default_title):
+        if path.exists():
+            mtime = os.path.getmtime(path)
+            return {
+                "exists": True,
+                "area": area,
+                "title": default_title,
+                "url": f"/camera/{path.name}?t={int(mtime*1000)}",
+                "size_bytes": os.path.getsize(path),
+                "updated_at": time.strftime("%d %b %Y %H:%M WIB", time.localtime(mtime))
+            }
+        return {
+            "exists": False,
+            "area": area,
+            "title": default_title,
+            "url": f"/camera/{path.name}",
+            "size_bytes": 0,
+            "updated_at": "Belum ada foto"
+        }
+
+    return {
+        "cam_online": current_telemetry.cam_online,
+        "kolam": get_info(kolam_path, "kolam", "Area Permukaan Kolam Ikan"),
+        "hopper": get_info(hopper_path, "hopper", "Wadah Pakan Pelet (Hopper)")
     }
 
 @app.get("/api/schedules", response_model=List[ScheduleItem])
