@@ -1,0 +1,104 @@
+// Centralized API Client for SiPIO FastAPI Backend
+
+const API_BASE = import.meta.env.VITE_API_URL || (
+  typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'http://localhost:8000/api'
+    : '/api'
+)
+
+export const WS_URL = import.meta.env.VITE_WS_URL || (
+  typeof window !== 'undefined' && window.location.hostname === 'localhost'
+    ? 'ws://localhost:8000/ws/telemetry'
+    : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/telemetry`
+)
+
+/**
+ * Helper to perform fetch with JSON handling and timeout
+ */
+async function fetchJson(endpoint, options = {}) {
+  const url = `${API_BASE}${endpoint}`
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), options.timeout || 5000)
+
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    })
+
+    if (!res.ok) {
+      const errorBody = await res.json().catch(() => ({}))
+      throw new Error(errorBody.detail || errorBody.message || `HTTP ${res.status}: ${res.statusText}`)
+    }
+
+    return await res.json()
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
+export const api = {
+  // 1. Healthcheck & Hardware Status
+  async getHealth() {
+    return fetchJson('/health')
+  },
+
+  // 2. Telemetry (Sensor Suhu DS18B20 & Float Switch)
+  async getTelemetry() {
+    return fetchJson('/telemetry')
+  },
+
+  // 3. Trigger Feeding (Servo Motor)
+  async triggerFeed(duration_ms = 2000, source = 'Manual (Dashboard)') {
+    return fetchJson('/feed', {
+      method: 'POST',
+      body: JSON.stringify({ duration_ms, source })
+    })
+  },
+
+  // 4. Schedules CRUD
+  async getSchedules() {
+    return fetchJson('/schedules')
+  },
+
+  async createSchedule(scheduleData) {
+    return fetchJson('/schedules', {
+      method: 'POST',
+      body: JSON.stringify(scheduleData)
+    })
+  },
+
+  async updateSchedule(id, scheduleData) {
+    return fetchJson(`/schedules/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(scheduleData)
+    })
+  },
+
+  async deleteSchedule(id) {
+    return fetchJson(`/schedules/${id}`, {
+      method: 'DELETE'
+    })
+  },
+
+  // 5. System Thresholds
+  async getThresholds() {
+    return fetchJson('/thresholds')
+  },
+
+  async updateThresholds(thresholdsData) {
+    return fetchJson('/thresholds', {
+      method: 'PUT',
+      body: JSON.stringify(thresholdsData)
+    })
+  },
+
+  // 6. Audit Trail Logs
+  async getLogs() {
+    return fetchJson('/logs')
+  }
+}

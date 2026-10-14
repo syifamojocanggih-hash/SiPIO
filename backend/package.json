@@ -2,16 +2,10 @@
   "name": "sipio-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "Backend API & IoT Telemetry Service for SiPIO (Smart Fish Feeder)",
-  "type": "module",
-  "main": "src/server.js",
+  "description": "Backend FastAPI & WebSocket MQTT Bridge for SiPIO",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2"
+    "start": "py -m uvicorn main:app --port 8000",
+    "dev": "py -m uvicorn main:app --reload --port 8000",
+    "dev:node": "node --watch src/server.js"
   }
 }

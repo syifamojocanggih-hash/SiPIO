@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Navbar } from './components/Navbar'
 import { AlertBanner } from './components/AlertBanner'
 import { MetricsOverview } from './components/MetricsOverview'
@@ -13,6 +13,7 @@ import { PWAInstallModal } from './components/PWAInstallModal'
 import { MobileInstallBanner } from './components/MobileInstallBanner'
 import { SimulationBar } from './components/SimulationBar'
 import { usePWA } from './hooks/usePWA'
+import { useIoTConnection } from './hooks/useIoTConnection'
 import {
   INITIAL_TELEMETRY,
   INITIAL_THRESHOLDS,
@@ -55,6 +56,42 @@ export default function App() {
   // Temperature Historical Dataset (D-02)
   const [tempHistory, setTempHistory] = useState(INITIAL_TEMP_HISTORY)
 
+  // Real-time FastAPI WebSocket & MQTT Bridge Connection
+  const handleTelemetryUpdate = useCallback((newTelem) => {
+    setTelemetry((prev) => ({
+      ...prev,
+      ...newTelem
+    }))
+    if (newTelem.esp_online !== undefined) {
+      setEspStatus((prev) => ({ ...prev, online: newTelem.esp_online, rssi: newTelem.rssi ?? prev.rssi }))
+    }
+    if (newTelem.cam_online !== undefined) {
+      setCamStatus({ online: newTelem.cam_online })
+    }
+  }, [])
+
+  const handleFeedEvent = useCallback((feedEntry) => {
+    setFeedLogs((prev) => {
+      if (prev.some((p) => p.id === feedEntry.id)) return prev
+      return [feedEntry, ...prev]
+    })
+  }, [])
+
+  const handleSchedulesUpdate = useCallback((newSchedules) => {
+    setSchedules(newSchedules)
+  }, [])
+
+  const handleThresholdsUpdate = useCallback((newThresholds) => {
+    setThresholds(newThresholds)
+  }, [])
+
+  const iotConnection = useIoTConnection({
+    onTelemetryUpdate: handleTelemetryUpdate,
+    onFeedEvent: handleFeedEvent,
+    onSchedulesUpdate: handleSchedulesUpdate,
+    onThresholdsUpdate: handleThresholdsUpdate
+  })
+
   // Last feed info
   const lastFeed = feedLogs.length > 0 ? {
     time: feedLogs[0].timestamp.split(' ')[2] || feedLogs[0].timestamp || '07:00',
@@ -86,8 +123,10 @@ export default function App() {
     })
   }
 
-  // Simulate subtle real-time telemetry fluctuations (like live DS18B20 stream)
+  // Fallback subtle telemetry fluctuations when disconnected from WebSocket backend
   useEffect(() => {
+    if (iotConnection.isConnected) return
+
     const timer = setInterval(() => {
       setTelemetry((prev) => {
         const delta = (Math.random() - 0.5) * 0.15
@@ -101,7 +140,7 @@ export default function App() {
     }, 5000)
 
     return () => clearInterval(timer)
-  }, [])
+  }, [iotConnection.isConnected])
 
   // Generate dynamic alerts based on conditions
   const activeAlerts = []
@@ -146,8 +185,26 @@ export default function App() {
     setDismissedAlertIds((prev) => [...prev, id])
   }
 
-  // Handler for manual feed trigger
-  const handleTriggerFeed = (newFeedEvent) => {
+  // Handler for feed trigger (dispatches to FastAPI REST endpoint or local fallback)
+  const handleTriggerFeed = async (newFeedEvent) => {
+    pwaState.triggerHaptic(40)
+
+    if (iotConnection.backendOnline) {
+      try {
+        const res = await iotConnection.triggerRemoteFeed(newFeedEvent.duration_ms, newFeedEvent.source)
+        if (res.log) {
+          setFeedLogs((prev) => {
+            if (prev.some((p) => p.id === res.log.id)) return prev
+            return [res.log, ...prev]
+          })
+        }
+        return
+      } catch (err) {
+        console.warn('[SiPIO] Gagal mengirim pakan ke backend, beralih ke simulasi lokal:', err)
+      }
+    }
+
+    // Local simulation fallback
     const newEntry = {
       id: Date.now(),
       timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -179,6 +236,7 @@ export default function App() {
         pwaState={pwaState}
         espStatus={espStatus}
         camStatus={camStatus}
+        backendConnection={iotConnection}
       />
 
       {/* 1.2 Banner PWA Pemasangan ke Smartphone */}

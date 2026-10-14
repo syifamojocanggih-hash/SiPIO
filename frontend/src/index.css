@@ -292,6 +292,11 @@ a:focus-visible {
   box-shadow: 0 0 6px var(--status-emerald);
 }
 
+.status-dot.simulated {
+  background-color: var(--accent-primary);
+  box-shadow: 0 0 6px rgba(2, 132, 199, 0.6);
+}
+
 .status-dot.offline {
   background-color: var(--status-rose);
   box-shadow: 0 0 6px var(--status-rose);

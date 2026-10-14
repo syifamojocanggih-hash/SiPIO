@@ -7,7 +7,8 @@ export function Navbar({
   onOpenSettings, 
   pwaState, 
   espStatus, 
-  camStatus 
+  camStatus,
+  backendConnection
 }) {
   return (
     <header className="top-header" role="banner">
@@ -25,6 +26,17 @@ export function Navbar({
       </div>
 
       <div className="header-status-pills" aria-label="Status Konektivitas Perangkat">
+        {/* FastAPI WebSocket Status */}
+        <div 
+          className="status-pill" 
+          title={backendConnection?.isConnected 
+            ? `FastAPI WebSocket Terhubung. MQTT: ${backendConnection?.mqttConnected ? 'Broker Terhubung' : 'Bridge Simulasi'}` 
+            : 'Backend belum terhubung. Beroperasi dalam mode simulasi browser lokal.'}
+        >
+          <span className={`status-dot ${backendConnection?.isConnected ? 'online' : 'simulated'}`} />
+          <span>{backendConnection?.isConnected ? 'FastAPI Live' : 'Simulasi'}</span>
+        </div>
+
         {/* ESP8266 Feeder Status */}
         <div className="status-pill" title={`ESP8266 Feeder: ${espStatus.online ? 'Online' : 'Offline'}, Sinyal: ${espStatus.rssi} dBm`}>
           <span className={`status-dot ${espStatus.online ? 'online' : 'offline'}`} />
