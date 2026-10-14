@@ -20,7 +20,7 @@ export function MetricsOverview({ telemetry, thresholds, lastFeed }) {
   const isWaterOk = telemetry.level_ok
 
   return (
-    <section className="metrics-row" aria-label="Ringkasan Metrik Kolam">
+    <section id="sec-overview" className="metrics-row" aria-label="Ringkasan Metrik Kolam">
       {/* 1. Suhu Air (DS18B20) */}
       <article className="metric-card">
         <div className="metric-header">

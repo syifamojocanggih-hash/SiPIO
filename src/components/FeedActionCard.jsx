@@ -78,7 +78,7 @@ export function FeedActionCard({
   }
 
   return (
-    <article className="card">
+    <article id="sec-feeder" className="card">
       <div className="card-header">
         <div>
           <h2 className="card-title">
@@ -104,7 +104,8 @@ export function FeedActionCard({
                 onClick={() => setDuration(dur)}
                 disabled={feedingState !== 'idle'}
               >
-                {dur} ms (~{(dur / 400).toFixed(0)}g)
+                <span className="duration-btn-ms">{dur} ms</span>
+                <span className="duration-btn-g">~{(dur / 400).toFixed(0)}g</span>
               </button>
             ))}
           </div>
@@ -121,8 +122,9 @@ export function FeedActionCard({
         >
           {feedingState === 'idle' && (
             <>
-              <Play size={20} fill="currentColor" />
-              <span>Beri Pakan Sekarang ({duration}ms)</span>
+              <Play size={18} fill="currentColor" />
+              <span className="btn-feed-text">Beri Pakan Sekarang</span>
+              <span className="btn-feed-chip">{duration}ms</span>
             </>
           )}
 

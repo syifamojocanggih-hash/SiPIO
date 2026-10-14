@@ -72,7 +72,7 @@ export function TempChart({ thresholds }) {
   const minTemp = Math.min(...temps).toFixed(1)
 
   return (
-    <article className="card chart-container">
+    <article id="sec-temp" className="card chart-container">
       <div className="card-header">
         <div>
           <h2 className="card-title">

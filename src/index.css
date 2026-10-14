@@ -412,6 +412,12 @@ a:focus-visible {
   display: grid;
   grid-template-columns: 1fr;
   gap: 20px;
+  min-width: 0;
+}
+
+.dashboard-grid > div {
+  min-width: 0;
+  max-width: 100%;
 }
 
 @media (min-width: 992px) {
@@ -429,6 +435,8 @@ a:focus-visible {
   box-shadow: var(--shadow-card);
   position: relative;
   overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .card-header {
@@ -456,9 +464,10 @@ a:focus-visible {
 /* Metrics Overview (D-01) */
 .metrics-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 16px;
   margin-bottom: 20px;
+  min-width: 0;
 }
 
 .metric-card {
@@ -473,6 +482,7 @@ a:focus-visible {
   position: relative;
   box-shadow: var(--shadow-sm);
   transition: transform var(--transition-fast), border-color var(--transition-fast);
+  min-width: 0;
 }
 
 .metric-card:hover {
@@ -573,25 +583,39 @@ a:focus-visible {
 }
 
 .duration-selector {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
 .duration-btn {
-  flex: 1;
-  min-width: 90px;
-  min-height: 44px;
-  padding: 8px 12px;
+  min-height: 48px;
+  padding: 8px 4px;
   background-color: var(--bg-card-subtle);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 0.85rem;
   color: var(--text-main);
   cursor: pointer;
   transition: all var(--transition-fast);
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.duration-btn-ms {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.duration-btn-g {
+  font-size: 0.72rem;
+  color: var(--text-muted);
 }
 
 .duration-btn:hover:not(:disabled) {
@@ -606,6 +630,10 @@ a:focus-visible {
   box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
 }
 
+.duration-btn.active .duration-btn-g {
+  color: rgba(255, 255, 255, 0.85);
+}
+
 .btn-feed-now {
   min-height: 54px;
   width: 100%;
@@ -613,22 +641,42 @@ a:focus-visible {
   border: none;
   background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
   color: #ffffff;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   position: relative;
   overflow: hidden;
+  padding: 12px 14px;
+  text-align: center;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .btn-feed-now:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(2, 132, 199, 0.45);
+}
+
+.btn-feed-text {
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: normal;
+}
+
+.btn-feed-chip {
+  background-color: rgba(255, 255, 255, 0.22);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
 }
 
 .btn-feed-now:disabled {
@@ -1101,8 +1149,179 @@ input:checked + .slider:before {
   gap: 6px;
   padding: 4px 10px;
   border-radius: var(--radius-full);
-  background-color: rgba(245, 158, 11, 0.15);
+  background-color: var(--status-amber-bg);
+  border: 1px solid var(--status-amber-border);
   color: var(--status-amber);
   font-size: 0.72rem;
   font-weight: 700;
 }
+
+/* PWA Installed Status Pill in Header */
+.pwa-installed-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  background-color: var(--status-emerald-bg);
+  border: 1px solid var(--status-emerald-border);
+  color: var(--status-emerald);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* Mobile Bottom Navigation Bar (PWA Shell) */
+.mobile-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--bg-surface);
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.08);
+    z-index: 90;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .mobile-bottom-nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    height: 60px;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 0 4px;
+  }
+
+  .bottom-nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: 100%;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    transition: color var(--transition-fast);
+  }
+
+  .bottom-nav-btn.active {
+    color: var(--accent-primary);
+    font-weight: 800;
+  }
+
+  .bottom-nav-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 26px;
+    border-radius: var(--radius-full);
+    transition: background-color var(--transition-fast);
+  }
+
+  .bottom-nav-btn.active .bottom-nav-icon-wrapper {
+    background-color: var(--accent-blue-soft);
+  }
+
+  /* Padding at bottom of container so content is never covered by bottom nav bar */
+  .app-container {
+    padding-bottom: max(96px, calc(env(safe-area-inset-bottom) + 84px)) !important;
+  }
+}
+
+/* PWA Guided Install Modal */
+.pwa-install-modal {
+  max-width: 460px;
+}
+
+.pwa-preview-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.pwa-preview-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  flex-shrink: 0;
+}
+
+.pwa-badge-offline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: var(--status-emerald);
+  font-weight: 700;
+}
+
+.pwa-benefits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0 14px 0;
+}
+
+.pwa-benefit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.84rem;
+  color: var(--text-main);
+  line-height: 1.4;
+}
+
+.pwa-steps-box {
+  background-color: var(--accent-blue-soft);
+  border: 1px solid var(--accent-blue-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+
+.pwa-steps-list {
+  margin-left: 20px;
+  font-size: 0.82rem;
+  color: var(--text-main);
+  line-height: 1.6;
+}
+
+/* Standalone PWA Optimizations */
+@media all and (display-mode: standalone) {
+  body {
+    overscroll-behavior-y: contain;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .top-header {
+    padding-top: max(12px, env(safe-area-inset-top));
+  }
+}
+

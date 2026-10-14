@@ -4,8 +4,27 @@ export function usePWA() {
   const [installPrompt, setInstallPrompt] = useState(null)
   const [isInstalled, setIsInstalled] = useState(false)
   const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false)
+  const [platform, setPlatform] = useState('android') // 'ios' | 'android' | 'desktop'
 
   useEffect(() => {
+    // Detect Platform
+    const userAgent = window.navigator.userAgent.toLowerCase()
+    const isIOSDevice = /iphone|ipad|ipod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    if (isIOSDevice) {
+      setPlatform('ios')
+    } else if (/android/.test(userAgent)) {
+      setPlatform('android')
+    } else {
+      setPlatform('desktop')
+    }
+
+    // Check standalone mode
+    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+    if (isStandaloneMode) {
+      setIsInstalled(true)
+    }
+
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault()
       setInstallPrompt(e)
@@ -14,6 +33,7 @@ export function usePWA() {
     const handleAppInstalled = () => {
       setIsInstalled(true)
       setInstallPrompt(null)
+      setIsInstallModalOpen(false)
     }
 
     const handleOnline = () => setIsOnline(true)
@@ -24,10 +44,6 @@ export function usePWA() {
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
 
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsInstalled(true)
-    }
-
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
       window.removeEventListener('appinstalled', handleAppInstalled)
@@ -37,18 +53,20 @@ export function usePWA() {
   }, [])
 
   const promptInstall = async () => {
-    if (!installPrompt) {
-      alert('Untuk memasang SiPio PWA:\n1. Di Chrome/Edge: Klik ikon Pasang di bilah alamat atau menu (titik tiga).\n2. Di Safari iOS: Klik tombol Share lalu pilih "Add to Home Screen".')
-      return
-    }
-    installPrompt.prompt()
-    const { outcome } = await installPrompt.userChoice
-    if (outcome === 'accepted') {
-      setInstallPrompt(null)
+    if (installPrompt) {
+      installPrompt.prompt()
+      const { outcome } = await installPrompt.userChoice
+      if (outcome === 'accepted') {
+        setInstallPrompt(null)
+        setIsInstallModalOpen(false)
+      }
+    } else {
+      // If native prompt is not available (e.g. iOS or already installed or desktop browser), show guide modal
+      setIsInstallModalOpen(true)
     }
   }
 
-  const triggerHaptic = (duration = 50) => {
+  const triggerHaptic = (duration = 40) => {
     if ('vibrate' in navigator) {
       try {
         navigator.vibrate(duration)
@@ -60,9 +78,13 @@ export function usePWA() {
 
   return {
     isOnline,
-    canInstall: !!installPrompt,
+    canInstall: !isInstalled,
     isInstalled,
+    platform,
+    isInstallModalOpen,
+    setIsInstallModalOpen,
     promptInstall,
     triggerHaptic
   }
 }
+

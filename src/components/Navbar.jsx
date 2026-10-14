@@ -1,5 +1,5 @@
 import React from 'react'
-import { Wifi, WifiOff, Camera, Sun, Moon, Settings, Download } from 'lucide-react'
+import { Wifi, WifiOff, Camera, Sun, Moon, Settings, Download, CheckCircle } from 'lucide-react'
 
 export function Navbar({ 
   theme, 
@@ -48,8 +48,13 @@ export function Navbar({
       </div>
 
       <div className="header-actions">
-        {/* PWA Install Button */}
-        {pwaState.canInstall && (
+        {/* PWA Install Button or Installed Badge */}
+        {pwaState.isInstalled ? (
+          <span className="pwa-installed-pill" title="Aplikasi berjalan dalam mode PWA Standalone">
+            <CheckCircle size={13} style={{ color: 'var(--status-emerald)' }} />
+            <span>PWA Aktif</span>
+          </span>
+        ) : (
           <button 
             type="button" 
             id="btn-pwa-install"
@@ -57,7 +62,7 @@ export function Navbar({
             onClick={pwaState.promptInstall}
             aria-label="Pasang Aplikasi SiPio ke Perangkat (PWA)"
           >
-            <Download size={16} />
+            <Download size={15} />
             <span>Pasang App</span>
           </button>
         )}

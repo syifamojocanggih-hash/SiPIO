@@ -8,6 +8,8 @@ import { TempChart } from './components/TempChart'
 import { ScheduleManager } from './components/ScheduleManager'
 import { FeedLogs } from './components/FeedLogs'
 import { SettingsModal } from './components/SettingsModal'
+import { MobileBottomNav } from './components/MobileBottomNav'
+import { PWAInstallModal } from './components/PWAInstallModal'
 import { usePWA } from './hooks/usePWA'
 
 export default function App() {
@@ -240,6 +242,20 @@ export default function App() {
           triggerHaptic={pwaState.triggerHaptic}
         />
       )}
+
+      {/* 6. PWA Guided Install Modal for iOS & Android */}
+      {pwaState.isInstallModalOpen && (
+        <PWAInstallModal
+          pwaState={pwaState}
+          onClose={() => pwaState.setIsInstallModalOpen(false)}
+        />
+      )}
+
+      {/* 7. Mobile App PWA Bottom Navigation Bar */}
+      <MobileBottomNav
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        triggerHaptic={pwaState.triggerHaptic}
+      />
     </div>
   )
 }

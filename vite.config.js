@@ -17,18 +17,72 @@ export default defineConfig({
         background_color: '#f8fafc',
         display: 'standalone',
         start_url: '/',
+        scope: '/',
         orientation: 'portrait-primary',
+        categories: ['utilities', 'productivity'],
         icons: [
           {
             src: '/sipio-icon.svg',
             sizes: '192x192 512x512',
             type: 'image/svg+xml',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: '/sipio-icon.svg',
+            sizes: '192x192 512x512',
+            type: 'image/svg+xml',
+            purpose: 'maskable'
+          }
+        ],
+        shortcuts: [
+          {
+            name: 'Beri Pakan Cepat',
+            short_name: 'Pakan',
+            description: 'Pemberian pakan pelet instan via servo',
+            url: '/#sec-feeder',
+            icons: [{ src: '/sipio-icon.svg', sizes: '192x192' }]
+          },
+          {
+            name: 'Pantau Kamera Kolam',
+            short_name: 'Kamera',
+            description: 'Lihat kondisi air kolam dan hopper pakan',
+            url: '/#sec-camera',
+            icons: [{ src: '/sipio-icon.svg', sizes: '192x192' }]
           }
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'gstatic-fonts-cache',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 * 60 * 24 * 365
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          }
+        ]
       }
     })
   ]

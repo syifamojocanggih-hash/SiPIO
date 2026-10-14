@@ -33,7 +33,7 @@ export function CameraMonitor({ camStatus }) {
     : '/camera/hopper_latest.jpg'
 
   return (
-    <article className="card camera-container">
+    <article id="sec-camera" className="card camera-container">
       <div className="card-header">
         <div>
           <h2 className="card-title">
