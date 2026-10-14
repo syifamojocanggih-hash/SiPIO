@@ -1,0 +1,60 @@
+/**
+ * SiPIO - Smart Fish Feeder & Pond Monitoring
+ * Node: ESP32-CAM AI-Thinker Module
+ * File: config.h.example
+ * Salin file ini menjadi 'config.h' lalu sesuaikan kredensial WiFi dan server Anda.
+ */
+
+#ifndef SIPIO_CAM_CONFIG_H
+#define SIPIO_CAM_CONFIG_H
+
+// -------------------------------------------------------------
+// 1. Kredensial WiFi Kolam
+// -------------------------------------------------------------
+const char* WIFI_SSID     = "NAMA_WIFI_ANDA";
+const char* WIFI_PASSWORD = "PASSWORD_WIFI_ANDA";
+
+// -------------------------------------------------------------
+// 2. Kredensial Backend Server FastAPI SiPIO
+// -------------------------------------------------------------
+// Masukkan alamat IP komputer/server backend (contoh: 192.168.1.100)
+const char* SERVER_HOST   = "192.168.1.100";
+const int   SERVER_PORT   = 8000;
+const char* UPLOAD_PATH   = "/api/camera/upload";
+
+// Area pemantauan: "kolam" (permukaan air kolam) atau "hopper" (wadah pelet)
+const char* CAMERA_AREA   = "kolam";
+
+// Interval otomatis pengambilan dan pengunggahan foto (detik)
+// PRD R-14 menetapkan interval standar 300 detik (5 menit)
+const int CAPTURE_INTERVAL_SEC = 300; 
+
+// -------------------------------------------------------------
+// 3. Konfigurasi Lampu Kilat (Flash LED GPIO4)
+// -------------------------------------------------------------
+// Aktifkan jika lokasi kolam gelap di malam hari
+#define USE_FLASH_LED     false
+#define FLASH_LED_PIN     4
+
+// -------------------------------------------------------------
+// 4. Pin Mapping AI-Thinker ESP32-CAM (OV2640 Sensor)
+// -------------------------------------------------------------
+#define PWDN_GPIO_NUM     32
+#define RESET_GPIO_NUM    -1
+#define XCLK_GPIO_NUM      0
+#define SIOD_GPIO_NUM     26
+#define SIOC_GPIO_NUM     27
+
+#define Y9_GPIO_NUM       35
+#define Y8_GPIO_NUM       34
+#define Y7_GPIO_NUM       39
+#define Y6_GPIO_NUM       36
+#define Y5_GPIO_NUM       21
+#define Y4_GPIO_NUM       19
+#define Y3_GPIO_NUM       18
+#define Y2_GPIO_NUM        5
+#define VSYNC_GPIO_NUM    25
+#define HREF_GPIO_NUM     23
+#define PCLK_GPIO_NUM     22
+
+#endif // SIPIO_CAM_CONFIG_H

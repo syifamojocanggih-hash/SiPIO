@@ -1,0 +1,63 @@
+/**
+ * SiPIO - Smart Fish Feeder & Pond Monitoring
+ * File: config.h.example
+ * Salin file ini menjadi 'config.h' lalu sesuaikan kredensial WiFi dan server Anda.
+ */
+
+#ifndef SIPIO_CONFIG_H
+#define SIPIO_CONFIG_H
+
+// -------------------------------------------------------------
+// 1. Kredensial WiFi Kolam
+// -------------------------------------------------------------
+const char* WIFI_SSID     = "NAMA_WIFI_ANDA";
+const char* WIFI_PASSWORD = "PASSWORD_WIFI_ANDA";
+
+// -------------------------------------------------------------
+// 2. Kredensial Broker MQTT SiPIO
+// -------------------------------------------------------------
+// Gunakan alamat IP komputer/server tempat FastAPI / Mosquitto berjalan
+const char* MQTT_SERVER   = "192.168.1.100"; 
+const int   MQTT_PORT     = 1883;
+const char* MQTT_USER     = "";               // Kosongkan jika tanpa autentikasi
+const char* MQTT_PASSWORD = "";               // Kosongkan jika tanpa autentikasi
+const char* MQTT_CLIENT_ID= "sipio_esp8266_feeder";
+
+// Topik MQTT (Sesuai Spesifikasi PRD SiPIO)
+const char* TOPIC_TELEMETRY = "sipio/feeder/telemetry";
+const char* TOPIC_STATUS    = "sipio/feeder/status";
+const char* TOPIC_COMMAND   = "sipio/feeder/command";
+const char* TOPIC_SCHEDULES = "sipio/feeder/schedules";
+
+// -------------------------------------------------------------
+// 3. Konfigurasi Pinout Perangkat Keras (NodeMCU / WeMos D1 Mini)
+// -------------------------------------------------------------
+// Sensor Suhu DS18B20 (OneWire - gunakan resistor pull-up 4.7kΩ ke 3.3V)
+#define PIN_DS18B20         4   // D2 pada NodeMCU (GPIO4)
+
+// Sensor Pelampung Air Kolam (Float Switch)
+#define PIN_FLOAT_SWITCH    14  // D5 pada NodeMCU (GPIO14)
+#define FLOAT_ACTIVE_LOW    true // true: pelampung terhubung ke GND saat air aman
+
+// Motor Servo Pelet Pakan (TowerPro SG90 / MG995 / Continuous)
+#define PIN_SERVO           12  // D6 pada NodeMCU (GPIO12)
+
+// LED Indikator Status & Aktivitas Pakan
+#define PIN_LED_STATUS      2   // D4 pada NodeMCU (GPIO2 / Builtin LED)
+
+// -------------------------------------------------------------
+// 4. Parameter Waktu & Pengaman Sistem
+// -------------------------------------------------------------
+#define TIMEZONE_OFFSET_HOURS 7   // Waktu Indonesia Barat (WIB = UTC+7)
+#define NTP_SERVER_PRIMARY    "pool.ntp.org"
+#define NTP_SERVER_BACKUP     "id.pool.ntp.org"
+
+// Interval pembacaan & publikasi telemetri (milidetik)
+#define TELEMETRY_INTERVAL_MS 5000 
+
+// Batas durasi pakan pengaman (milidetik)
+#define MIN_FEED_DURATION_MS  500
+#define MAX_FEED_DURATION_MS  5000
+#define DEFAULT_FEED_MS       2000
+
+#endif // SIPIO_CONFIG_H

@@ -13,9 +13,13 @@ SiPIO/
 │
 ├── backend/                # Layanan Backend FastAPI, WebSocket & MQTT Bridge
 │   ├── main.py             # Server FastAPI (REST API, WebSocket /ws/telemetry, MQTT Broker)
-│   ├── requirements.txt    # Dependensi Python (FastAPI, Uvicorn, WebSockets, Paho-MQTT)
-│   ├── src/server.js       # Fallback server Node.js Express alternatif
+│   ├── database.py         # SQLAlchemy ORM (MySQL Laragon / SQLite)
+│   ├── requirements.txt    # Dependensi Python
 │   └── package.json        # Script npm runner untuk backend
+│
+├── hardware/               # Program Firmware Mikrokontroler Arduino C++ (.ino)
+│   ├── esp8266_feeder/     # Node Feeder: DS18B20 + Float Switch + Servo + LittleFS
+│   └── esp32_cam/          # Node Kamera: OV2640 Snapshot + HTTP Multipart Uploader
 │
 ├── DESIGN.md               # Dokumentasi Design System (White & Blue High Contrast)
 ├── package.json            # Root Workspace Script Runner
