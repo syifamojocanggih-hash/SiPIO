@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Play, Check, AlertCircle, Info, Sparkles } from 'lucide-react'
+import { Play, Check, Info } from 'lucide-react'
 
 export function FeedActionCard({ 
   telemetry, 

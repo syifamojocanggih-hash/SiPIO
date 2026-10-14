@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Calendar, Plus, Trash2, Edit2, CheckCircle2, Clock, X } from 'lucide-react'
+import { Plus, Trash2, Edit2, CheckCircle2, Clock, X } from 'lucide-react'
 
 export function ScheduleManager({ schedules, onUpdateSchedules, triggerHaptic }) {
   const [isModalOpen, setIsModalOpen] = useState(false)

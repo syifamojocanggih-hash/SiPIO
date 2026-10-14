@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Camera, RefreshCw, Maximize2, Eye, ShieldAlert, Sparkles, X } from 'lucide-react'
+import { Camera, RefreshCw, Maximize2, Eye, Sparkles, X } from 'lucide-react'
 
 export function CameraMonitor({ camStatus }) {
   const [activeArea, setActiveArea] = useState('kolam') // 'kolam' | 'hopper'

@@ -11,8 +11,10 @@ import { SettingsModal } from './components/SettingsModal'
 import { usePWA } from './hooks/usePWA'
 
 export default function App() {
-  // Theme state: 'dark' by default, switchable to 'light'
-  const [theme, setTheme] = useState('dark')
+  // Theme state: 'light' by default for optimal outdoor sunlight readability (SiPIO White & Blue)
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('sipio-theme') || 'light'
+  })
 
   // PWA hook
   const pwaState = usePWA()
@@ -99,7 +101,15 @@ export default function App() {
   }, [theme])
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
+    setTheme((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark'
+      try {
+        localStorage.setItem('sipio-theme', next)
+      } catch {
+        // ignore in case of private mode restriction
+      }
+      return next
+    })
   }
 
   // Simulate subtle real-time telemetry fluctuations (like live DS18B20 stream)

@@ -1,9 +1,8 @@
 import React from 'react'
-import { Thermometer, Waves, Clock, CheckCircle, AlertOctagon, HelpCircle } from 'lucide-react'
+import { Thermometer, Waves, Clock } from 'lucide-react'
 
 export function MetricsOverview({ telemetry, thresholds, lastFeed }) {
   // Temperature evaluation based on thresholds
-  const isTempSafe = telemetry.temp >= thresholds.temp_min && telemetry.temp <= thresholds.temp_max
   const isTempCold = telemetry.temp < thresholds.temp_min
   const isTempHot = telemetry.temp > thresholds.temp_max
 

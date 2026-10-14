@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Settings, X, Save, AlertCircle } from 'lucide-react'
+import { Settings, X, Save } from 'lucide-react'
 
 export function SettingsModal({ thresholds, onSave, onClose, triggerHaptic }) {
   const [formData, setFormData] = useState({ ...thresholds })

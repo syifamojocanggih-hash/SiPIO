@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { LineChart, TrendingUp, Calendar } from 'lucide-react'
+import { TrendingUp } from 'lucide-react'
 
 export function TempChart({ thresholds }) {
   const [range, setRange] = useState('24h') // '1h' | '24h' | '7d'
@@ -155,13 +155,13 @@ export function TempChart({ thresholds }) {
           })}
 
           {/* Shaded Area Under Line */}
-          <path d={areaD} fill="rgba(56, 189, 248, 0.12)" />
+          <path d={areaD} fill="rgba(2, 132, 199, 0.12)" />
 
           {/* Temperature Trend Line */}
           <path
             d={pathD}
             fill="none"
-            stroke="var(--accent-cyan)"
+            stroke="var(--accent-primary)"
             strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -179,7 +179,7 @@ export function TempChart({ thresholds }) {
                   cx={x}
                   cy={y}
                   r={isHovered ? 6 : 4}
-                  fill={isHovered ? '#ffffff' : 'var(--accent-cyan)'}
+                  fill={isHovered ? '#ffffff' : 'var(--accent-primary)'}
                   stroke="var(--bg-base)"
                   strokeWidth="2"
                   style={{ cursor: 'pointer', transition: 'all 150ms' }}
@@ -206,7 +206,7 @@ export function TempChart({ thresholds }) {
                       height="20"
                       rx="4"
                       fill="var(--bg-card)"
-                      stroke="var(--accent-cyan)"
+                      stroke="var(--accent-primary)"
                     />
                     <text
                       x={x}
@@ -230,7 +230,7 @@ export function TempChart({ thresholds }) {
       {/* Summary Footer */}
       <div className="chart-legend">
         <div className="legend-item">
-          <div className="legend-color" style={{ backgroundColor: 'var(--accent-cyan)' }} />
+          <div className="legend-color" style={{ backgroundColor: 'var(--accent-primary)' }} />
           <span>Suhu Terbaca</span>
         </div>
         <div className="legend-item">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { FileText, Download, Filter, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
+import { FileText, Download, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
 
 export function FeedLogs({ logs }) {
   const [filterResult, setFilterResult] = useState('all')

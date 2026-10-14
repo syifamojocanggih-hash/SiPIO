@@ -1,5 +1,5 @@
 import React from 'react'
-import { AlertTriangle, AlertCircle, X, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, X, ShieldAlert } from 'lucide-react'
 
 export function AlertBanner({ alerts, onDismissAlert }) {
   if (!alerts || alerts.length === 0) return null
