@@ -1,0 +1,15 @@
+{
+  "name": "sipio-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SiPIO IoT Workspace (Frontend PWA & Backend API)",
+  "scripts": {
+    "frontend": "npm run dev --prefix frontend",
+    "backend": "npm run dev --prefix backend",
+    "dev": "npm run dev --prefix frontend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "build": "npm run build --prefix frontend",
+    "build:frontend": "npm run build --prefix frontend"
+  }
+}
