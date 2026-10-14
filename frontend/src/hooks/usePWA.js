@@ -6,6 +6,22 @@ export function usePWA() {
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false)
   const [platform, setPlatform] = useState('android') // 'ios' | 'android' | 'desktop'
+  const [isBannerDismissed, setIsBannerDismissed] = useState(() => {
+    try {
+      return sessionStorage.getItem('sipio-pwa-banner-dismissed') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  const dismissBanner = () => {
+    setIsBannerDismissed(true)
+    try {
+      sessionStorage.setItem('sipio-pwa-banner-dismissed', 'true')
+    } catch {
+      // ignore
+    }
+  }
 
   useEffect(() => {
     // Detect Platform
@@ -83,6 +99,8 @@ export function usePWA() {
     platform,
     isInstallModalOpen,
     setIsInstallModalOpen,
+    isBannerDismissed,
+    dismissBanner,
     promptInstall,
     triggerHaptic
   }

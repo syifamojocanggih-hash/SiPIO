@@ -10,6 +10,7 @@ import { FeedLogs } from './components/FeedLogs'
 import { SettingsModal } from './components/SettingsModal'
 import { MobileBottomNav } from './components/MobileBottomNav'
 import { PWAInstallModal } from './components/PWAInstallModal'
+import { MobileInstallBanner } from './components/MobileInstallBanner'
 import { SimulationBar } from './components/SimulationBar'
 import { usePWA } from './hooks/usePWA'
 import {
@@ -104,6 +105,16 @@ export default function App() {
 
   // Generate dynamic alerts based on conditions
   const activeAlerts = []
+  
+  if (!pwaState.isOnline && !dismissedAlertIds.includes('alert_pwa_offline')) {
+    activeAlerts.push({
+      id: 'alert_pwa_offline',
+      type: 'warning',
+      title: 'PWA Mode Offline Aktif',
+      message: 'Koneksi internet terputus. Menampilkan data telemetri dan snapshot tersimpan dari cache Workbox.'
+    })
+  }
+
   if (!telemetry.level_ok && !dismissedAlertIds.includes('alert_level_low')) {
     activeAlerts.push({
       id: 'alert_level_low',
@@ -169,6 +180,9 @@ export default function App() {
         espStatus={espStatus}
         camStatus={camStatus}
       />
+
+      {/* 1.2 Banner PWA Pemasangan ke Smartphone */}
+      <MobileInstallBanner pwaState={pwaState} />
 
       {/* 1.5 Interactive Browser Simulation Bar for Testing IoT States */}
       <SimulationBar
