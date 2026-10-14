@@ -6,10 +6,16 @@ import time
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, status
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import paho.mqtt.client as mqtt
+from sqlalchemy.orm import Session
+
+from database import (
+    init_db, get_db, SessionLocal,
+    TelemetryLogModel, FeedLogModel, ScheduleModel, ThresholdModel
+)
 
 # Configure logging
 logging.basicConfig(
@@ -207,8 +213,17 @@ async def periodic_telemetry_loop():
 # -------------------------------------------------------------
 # FastAPI Lifespan Context Manager
 # -------------------------------------------------------------
+# FastAPI Lifespan Context Manager
+# -------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 0. Initialize SQLite / MySQL Database Tables
+    try:
+        init_db()
+        logger.info("Database (SQLite/MySQL) berhasil diinisialisasi.")
+    except Exception as e:
+        logger.error(f"Gagal inisialisasi database: {e}")
+
     # 1. Start MQTT Client (non-blocking)
     try:
         mqtt_client.connect_async(MQTT_BROKER_HOST, MQTT_BROKER_PORT, 60)
@@ -260,6 +275,7 @@ def read_root():
     return {
         "app": "SiPIO IoT Backend Service",
         "framework": "FastAPI",
+        "database": os.getenv("DATABASE_URL", "sqlite:///./sipio.db").split("://")[0],
         "status": "online",
         "docs_url": "/docs",
         "websocket_url": "/ws/telemetry",
@@ -277,6 +293,7 @@ def get_health():
         "uptime_seconds": int(time.time() - start_time),
         "mqtt_connected": mqtt_connected,
         "websocket_clients": len(ws_manager.active_connections),
+        "database_type": os.getenv("DATABASE_URL", "sqlite:///./sipio.db").split("://")[0],
         "devices": {
             "feeder_esp8266": {
                 "online": current_telemetry.esp_online,
@@ -293,18 +310,28 @@ def get_telemetry():
     return current_telemetry
 
 @app.post("/api/feed")
-async def trigger_feeding(req: FeedRequest):
+async def trigger_feeding(req: FeedRequest, db: Session = Depends(get_db)):
     # Proteksi 1: Sensor Level Air (PRD Section 11 & 13)
     if not current_telemetry.level_ok:
+        skipped_log = FeedLogModel(
+            timestamp_str=time.strftime("%d %b %Y %H:%M:%S"),
+            source=req.source,
+            duration_ms=req.duration_ms,
+            result="skipped",
+            reason="Gagal: Level air kolam terdeteksi di bawah batas aman (Float Switch GPIO14)"
+        )
+        db.add(skipped_log)
+        db.commit()
+        db.refresh(skipped_log)
+
         log_entry = {
-            "id": int(time.time() * 1000),
-            "timestamp": time.strftime("%d %b %Y %H:%M:%S"),
-            "source": req.source,
-            "duration_ms": req.duration_ms,
-            "result": "skipped",
-            "reason": "Gagal: Level air kolam terdeteksi di bawah batas aman (Float Switch GPIO14)"
+            "id": skipped_log.id,
+            "timestamp": skipped_log.timestamp_str,
+            "source": skipped_log.source,
+            "duration_ms": skipped_log.duration_ms,
+            "result": skipped_log.result,
+            "reason": skipped_log.reason
         }
-        feed_logs_db.insert(0, log_entry)
         
         await ws_manager.broadcast({
             "type": "feed_event",
@@ -327,16 +354,26 @@ async def trigger_feeding(req: FeedRequest):
         mqtt_client.publish(TOPIC_FEED_CMD, payload, qos=1)
         logger.info(f"Published feed command to MQTT: {payload}")
 
-    # Catat audit trail pakan sukses
+    # Catat audit trail pakan sukses ke Database
+    done_log = FeedLogModel(
+        timestamp_str=time.strftime("%d %b %Y %H:%M:%S"),
+        source=req.source,
+        duration_ms=req.duration_ms,
+        result="done",
+        reason=f"Selesai: Servo berputar {req.duration_ms}ms tepat waktu"
+    )
+    db.add(done_log)
+    db.commit()
+    db.refresh(done_log)
+
     log_entry = {
-        "id": int(time.time() * 1000),
-        "timestamp": time.strftime("%d %b %Y %H:%M:%S"),
-        "source": req.source,
-        "duration_ms": req.duration_ms,
-        "result": "done",
-        "reason": f"Selesai: Servo berputar {req.duration_ms}ms tepat waktu"
+        "id": done_log.id,
+        "timestamp": done_log.timestamp_str,
+        "source": done_log.source,
+        "duration_ms": done_log.duration_ms,
+        "result": done_log.result,
+        "reason": done_log.reason
     }
-    feed_logs_db.insert(0, log_entry)
 
     # Siarkan event pakan ke seluruh frontend PWA secara realtime
     await ws_manager.broadcast({
@@ -351,84 +388,159 @@ async def trigger_feeding(req: FeedRequest):
     }
 
 @app.get("/api/schedules", response_model=List[ScheduleItem])
-def get_schedules():
-    return schedules_db
+def get_schedules(db: Session = Depends(get_db)):
+    rows = db.query(ScheduleModel).all()
+    return [
+        ScheduleItem(
+            id=r.id,
+            time=r.time,
+            duration_ms=r.duration_ms,
+            days=r.days,
+            enabled=r.enabled,
+            synced=r.synced
+        )
+        for r in rows
+    ]
 
 @app.post("/api/schedules", response_model=ScheduleItem, status_code=status.HTTP_201_CREATED)
-async def create_schedule(item: ScheduleCreate):
-    new_item = {
-        "id": int(time.time() * 1000),
-        "time": item.time,
-        "duration_ms": item.duration_ms,
-        "days": item.days,
-        "enabled": True,
-        "synced": True
-    }
-    schedules_db.append(new_item)
+async def create_schedule(item: ScheduleCreate, db: Session = Depends(get_db)):
+    new_schedule = ScheduleModel(
+        time=item.time,
+        duration_ms=item.duration_ms,
+        days=item.days,
+        enabled=True,
+        synced=True
+    )
+    db.add(new_schedule)
+    db.commit()
+    db.refresh(new_schedule)
 
     # Sinkronisasi ke MQTT LittleFS topic
+    all_schedules = [
+        {"id": r.id, "time": r.time, "duration_ms": r.duration_ms, "days": r.days, "enabled": r.enabled}
+        for r in db.query(ScheduleModel).all()
+    ]
     if mqtt_connected:
-        mqtt_client.publish(TOPIC_SCHEDULES, json.dumps(schedules_db), retain=True)
+        mqtt_client.publish(TOPIC_SCHEDULES, json.dumps(all_schedules), retain=True)
 
     await ws_manager.broadcast({
         "type": "schedules_updated",
-        "data": schedules_db
+        "data": all_schedules
     })
 
-    return new_item
+    return ScheduleItem(
+        id=new_schedule.id,
+        time=new_schedule.time,
+        duration_ms=new_schedule.duration_ms,
+        days=new_schedule.days,
+        enabled=new_schedule.enabled,
+        synced=new_schedule.synced
+    )
 
 @app.put("/api/schedules/{schedule_id}")
-async def update_schedule(schedule_id: int, updated: dict):
-    for i, s in enumerate(schedules_db):
-        if s["id"] == schedule_id:
-            schedules_db[i].update(updated)
-            
-            if mqtt_connected:
-                mqtt_client.publish(TOPIC_SCHEDULES, json.dumps(schedules_db), retain=True)
-                
-            await ws_manager.broadcast({
-                "type": "schedules_updated",
-                "data": schedules_db
-            })
-            return {"success": True, "schedule": schedules_db[i]}
-
-    raise HTTPException(status_code=404, detail="Jadwal tidak ditemukan")
-
-@app.delete("/api/schedules/{schedule_id}")
-async def delete_schedule(schedule_id: int):
-    global schedules_db
-    before_count = len(schedules_db)
-    schedules_db = [s for s in schedules_db if s["id"] != schedule_id]
-    
-    if len(schedules_db) == before_count:
+async def update_schedule(schedule_id: int, updated: dict, db: Session = Depends(get_db)):
+    sched = db.query(ScheduleModel).filter_by(id=schedule_id).first()
+    if not sched:
         raise HTTPException(status_code=404, detail="Jadwal tidak ditemukan")
 
+    if "time" in updated:
+        sched.time = updated["time"]
+    if "duration_ms" in updated:
+        sched.duration_ms = int(updated["duration_ms"])
+    if "days" in updated:
+        sched.days = updated["days"]
+    if "enabled" in updated:
+        sched.enabled = bool(updated["enabled"])
+    if "synced" in updated:
+        sched.synced = bool(updated["synced"])
+
+    db.commit()
+
+    all_schedules = [
+        {"id": r.id, "time": r.time, "duration_ms": r.duration_ms, "days": r.days, "enabled": r.enabled}
+        for r in db.query(ScheduleModel).all()
+    ]
     if mqtt_connected:
-        mqtt_client.publish(TOPIC_SCHEDULES, json.dumps(schedules_db), retain=True)
+        mqtt_client.publish(TOPIC_SCHEDULES, json.dumps(all_schedules), retain=True)
 
     await ws_manager.broadcast({
         "type": "schedules_updated",
-        "data": schedules_db
+        "data": all_schedules
+    })
+
+    return {"success": True, "schedule": {"id": sched.id, "time": sched.time, "duration_ms": sched.duration_ms, "days": sched.days, "enabled": sched.enabled}}
+
+@app.delete("/api/schedules/{schedule_id}")
+async def delete_schedule(schedule_id: int, db: Session = Depends(get_db)):
+    sched = db.query(ScheduleModel).filter_by(id=schedule_id).first()
+    if not sched:
+        raise HTTPException(status_code=404, detail="Jadwal tidak ditemukan")
+
+    db.delete(sched)
+    db.commit()
+
+    all_schedules = [
+        {"id": r.id, "time": r.time, "duration_ms": r.duration_ms, "days": r.days, "enabled": r.enabled}
+        for r in db.query(ScheduleModel).all()
+    ]
+    if mqtt_connected:
+        mqtt_client.publish(TOPIC_SCHEDULES, json.dumps(all_schedules), retain=True)
+
+    await ws_manager.broadcast({
+        "type": "schedules_updated",
+        "data": all_schedules
     })
     return {"success": True, "message": f"Jadwal {schedule_id} berhasil dihapus"}
 
 @app.get("/api/thresholds", response_model=ThresholdsConfig)
-def get_thresholds():
+def get_thresholds(db: Session = Depends(get_db)):
+    t = db.query(ThresholdModel).filter_by(id=1).first()
+    if t:
+        return ThresholdsConfig(
+            temp_min=t.temp_min,
+            temp_max=t.temp_max,
+            min_gap_min=t.min_gap_min,
+            default_duration_ms=t.default_duration_ms,
+            offline_after_s=t.offline_after_s,
+            camera_interval_s=t.camera_interval_s
+        )
     return current_thresholds
 
 @app.put("/api/thresholds")
-async def update_thresholds(cfg: ThresholdsConfig):
-    global current_thresholds
-    current_thresholds = cfg
+async def update_thresholds(cfg: ThresholdsConfig, db: Session = Depends(get_db)):
+    t = db.query(ThresholdModel).filter_by(id=1).first()
+    if not t:
+        t = ThresholdModel(id=1)
+        db.add(t)
+
+    t.temp_min = cfg.temp_min
+    t.temp_max = cfg.temp_max
+    t.min_gap_min = cfg.min_gap_min
+    t.default_duration_ms = cfg.default_duration_ms
+    t.offline_after_s = cfg.offline_after_s
+    t.camera_interval_s = cfg.camera_interval_s
+    db.commit()
+
     await ws_manager.broadcast({
         "type": "thresholds_updated",
-        "data": current_thresholds.model_dump()
+        "data": cfg.model_dump()
     })
-    return {"success": True, "thresholds": current_thresholds}
+    return {"success": True, "thresholds": cfg}
 
 @app.get("/api/logs")
-def get_logs():
-    return feed_logs_db
+def get_logs(db: Session = Depends(get_db)):
+    logs = db.query(FeedLogModel).order_by(FeedLogModel.id.desc()).limit(50).all()
+    return [
+        {
+            "id": l.id,
+            "timestamp": l.timestamp_str,
+            "source": l.source,
+            "duration_ms": l.duration_ms,
+            "result": l.result,
+            "reason": l.reason
+        }
+        for l in logs
+    ]
 
 # -------------------------------------------------------------
 # WebSocket Real-Time Endpoint
