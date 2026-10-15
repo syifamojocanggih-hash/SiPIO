@@ -74,11 +74,36 @@ export default function App() {
     }
   }, [])
 
+  // Persistent tracking of last feed epoch timestamp for 30-minute safety cooldown
+  const [lastFeedTimestamp, setLastFeedTimestamp] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sipio_last_feed_time')
+      return saved ? parseInt(saved, 10) : 0
+    } catch {
+      return 0
+    }
+  })
+
+  const handleResetCooldown = useCallback(() => {
+    setLastFeedTimestamp(0)
+    try {
+      localStorage.removeItem('sipio_last_feed_time')
+    } catch {}
+    pwaState.triggerHaptic(40)
+  }, [pwaState])
+
   const handleFeedEvent = useCallback((feedEntry) => {
     setFeedLogs((prev) => {
       if (prev.some((p) => p.id === feedEntry.id)) return prev
       return [feedEntry, ...prev]
     })
+    if (feedEntry.result === 'done') {
+      const now = Date.now()
+      setLastFeedTimestamp(now)
+      try {
+        localStorage.setItem('sipio_last_feed_time', now.toString())
+      } catch {}
+    }
   }, [])
 
   const handleSchedulesUpdate = useCallback((newSchedules) => {
@@ -232,6 +257,13 @@ export default function App() {
   const handleTriggerFeed = async (newFeedEvent) => {
     pwaState.triggerHaptic(40)
 
+    // Catat waktu pakan terkini untuk memulai countdown 30 menit
+    const now = Date.now()
+    setLastFeedTimestamp(now)
+    try {
+      localStorage.setItem('sipio_last_feed_time', now.toString())
+    } catch {}
+
     if (iotConnection.backendOnline) {
       try {
         const res = await iotConnection.triggerRemoteFeed(newFeedEvent.duration_ms, newFeedEvent.source)
@@ -266,6 +298,7 @@ export default function App() {
     setFeedLogs(INITIAL_FEED_LOGS)
     setTempHistory(INITIAL_TEMP_HISTORY)
     setDismissedAlertIds([])
+    handleResetCooldown()
     pwaState.triggerHaptic(50)
   }
 
@@ -320,7 +353,9 @@ export default function App() {
             telemetry={telemetry}
             thresholds={thresholds}
             lastFeed={lastFeed}
+            lastFeedTimestamp={lastFeedTimestamp}
             onTriggerFeed={handleTriggerFeed}
+            onResetCooldown={handleResetCooldown}
             triggerHaptic={pwaState.triggerHaptic}
           />
 

@@ -714,6 +714,87 @@ a:focus-visible {
   gap: 8px;
 }
 
+.btn-feed-now.cooldown-active {
+  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  color: #ffffff;
+  border: 1px solid #334155;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+[data-theme="dark"] .btn-feed-now.cooldown-active {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #94a3b8;
+  border-color: #334155;
+}
+
+.cooldown-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #38bdf8, #0284c7);
+  transition: width 1s linear;
+}
+
+.cooldown-timer-badge {
+  background-color: rgba(254, 240, 138, 0.25);
+  color: #fef08a;
+  border: 1px solid rgba(253, 224, 71, 0.6);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+[data-theme="dark"] .cooldown-timer-badge {
+  background-color: rgba(234, 179, 8, 0.22);
+  color: #fde047;
+  border-color: rgba(234, 179, 8, 0.45);
+}
+
+.feed-rules-notice.cooldown-notice {
+  background-color: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+[data-theme="dark"] .feed-rules-notice.cooldown-notice {
+  background-color: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fde68a;
+}
+
+.btn-link-reset-cooldown {
+  background: none;
+  border: 1px solid #d97706;
+  color: #d97706;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-link-reset-cooldown:hover {
+  background-color: #d97706;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .btn-link-reset-cooldown {
+  border-color: #fbbf24;
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .btn-link-reset-cooldown:hover {
+  background-color: #fbbf24;
+  color: #0f172a;
+}
+
 /* Camera Panel (D-10) */
 .camera-container {
   display: flex;

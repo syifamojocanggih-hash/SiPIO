@@ -64,6 +64,7 @@ class TelemetryData(BaseModel):
 class FeedRequest(BaseModel):
     duration_ms: int = Field(2000, ge=500, le=5000, description="Durasi putaran motor servo pelet (ms)")
     source: str = Field("Manual (Dashboard)", description="Sumber pemicu aksi pakan")
+    bypass_cooldown: bool = Field(False, description="Lewati jeda waktu 30 menit (hanya untuk pengujian simulasi)")
 
 class ScheduleItem(BaseModel):
     id: int
@@ -93,6 +94,7 @@ current_telemetry = TelemetryData()
 current_thresholds = ThresholdsConfig()
 start_time = time.time()
 mqtt_connected = False
+last_feed_epoch_s: float = 0.0  # Merekam epoch pemberian pakan terakhir untuk validasi jeda 30 menit
 
 schedules_db: List[dict] = [
     {"id": 1, "time": "07:00", "duration_ms": 2000, "days": "Setiap Hari", "enabled": True, "synced": True},
@@ -446,6 +448,8 @@ def get_telemetry_history(
 
 @app.post("/api/feed")
 async def trigger_feeding(req: FeedRequest, db: Session = Depends(get_db)):
+    global last_feed_epoch_s
+
     # Proteksi 1: Sensor Level Air (PRD Section 11 & 13)
     if not current_telemetry.level_ok:
         skipped_log = FeedLogModel(
@@ -478,6 +482,43 @@ async def trigger_feeding(req: FeedRequest, db: Session = Depends(get_db)):
             detail="Pemberian pakan ditolak: Level air kolam rendah (Proteksi keselamatan aktif)."
         )
 
+    # Proteksi 2: Jeda Minimal Antar Pakan 30 Menit (PRD Section 11 & 13)
+    min_gap_sec = current_thresholds.min_gap_min * 60
+    time_since_last_feed = time.time() - last_feed_epoch_s
+    if last_feed_epoch_s > 0 and time_since_last_feed < min_gap_sec and not req.bypass_cooldown:
+        rem_sec = int(min_gap_sec - time_since_last_feed)
+        rem_min = rem_sec // 60
+        rem_s = rem_sec % 60
+
+        skipped_log = FeedLogModel(
+            timestamp_str=time.strftime("%d %b %Y %H:%M:%S"),
+            source=req.source,
+            duration_ms=req.duration_ms,
+            result="skipped",
+            reason=f"Ditolak: Jeda 30 menit antar pakan belum terpenuhi ({rem_min}m {rem_s}s tersisa)"
+        )
+        db.add(skipped_log)
+        db.commit()
+        db.refresh(skipped_log)
+
+        log_entry = {
+            "id": skipped_log.id,
+            "timestamp": skipped_log.timestamp_str,
+            "source": skipped_log.source,
+            "duration_ms": skipped_log.duration_ms,
+            "result": skipped_log.result,
+            "reason": skipped_log.reason
+        }
+        await ws_manager.broadcast({
+            "type": "feed_event",
+            "data": log_entry
+        })
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Pemberian pakan ditolak: Jeda minimal {current_thresholds.min_gap_min} menit antar pakan belum terpenuhi. Sisa waktu pengaman: {rem_min} menit {rem_s} detik."
+        )
+
     # Kirim perintah putar servo ke broker MQTT jika terhubung
     payload = json.dumps({
         "action": "feed",
@@ -501,6 +542,9 @@ async def trigger_feeding(req: FeedRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(done_log)
 
+    # Perbarui epoch waktu pakan terakhir untuk memulai jeda pengaman 30 menit
+    last_feed_epoch_s = time.time()
+
     log_entry = {
         "id": done_log.id,
         "timestamp": done_log.timestamp_str,
@@ -521,6 +565,13 @@ async def trigger_feeding(req: FeedRequest, db: Session = Depends(get_db)):
         "message": f"Perintah pakan {req.duration_ms}ms berhasil dikirim ke feeder",
         "log": log_entry
     }
+
+@app.post("/api/feed/reset-cooldown")
+def reset_feed_cooldown():
+    """Mereset jeda waktu pengaman 30 menit untuk keperluan pengujian simulasi"""
+    global last_feed_epoch_s
+    last_feed_epoch_s = 0.0
+    return {"success": True, "message": "Jeda pengaman 30 menit berhasil direset untuk pengujian"}
 
 # -------------------------------------------------------------
 # ESP32-CAM Snapshot Endpoints
