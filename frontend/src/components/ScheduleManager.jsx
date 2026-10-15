@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Trash2, Edit2, CheckCircle2, Clock, X } from 'lucide-react'
 
-export function ScheduleManager({ schedules, onUpdateSchedules, triggerHaptic }) {
+export function ScheduleManager({ 
+  schedules, 
+  onAddSchedule,
+  onEditSchedule,
+  onToggleSchedule,
+  onDeleteSchedule,
+  onUpdateSchedules, 
+  triggerHaptic 
+}) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
 
   // Form states
   const [time, setTime] = useState('07:00')
@@ -38,48 +47,79 @@ export function ScheduleManager({ schedules, onUpdateSchedules, triggerHaptic })
     setIsModalOpen(true)
   }
 
-  const handleToggle = (id) => {
+  const handleToggle = async (sch) => {
     triggerHaptic(40)
-    const updated = schedules.map((s) => 
-      s.id === id ? { ...s, enabled: !s.enabled } : s
-    )
-    onUpdateSchedules(updated)
-  }
-
-  const handleDelete = (id) => {
-    if (window.confirm('Yakin ingin menghapus jadwal pakan ini?')) {
-      triggerHaptic(50)
-      const updated = schedules.filter((s) => s.id !== id)
-      onUpdateSchedules(updated)
-    }
-  }
-
-  const handleSave = (e) => {
-    e.preventDefault()
-    triggerHaptic(50)
-
-    if (editingSchedule) {
-      // Edit
+    const newEnabled = !sch.enabled
+    if (onToggleSchedule) {
+      await onToggleSchedule(sch.id, newEnabled)
+    } else if (onUpdateSchedules) {
       const updated = schedules.map((s) => 
-        s.id === editingSchedule.id 
-          ? { ...s, time, duration_ms: Number(duration), days } 
-          : s
+        s.id === sch.id ? { ...s, enabled: newEnabled } : s
       )
       onUpdateSchedules(updated)
-    } else {
-      // Add new
-      const newSchedule = {
-        id: Date.now(),
-        time,
-        duration_ms: Number(duration),
-        days,
-        enabled: true,
-        synced: true
-      }
-      onUpdateSchedules([...schedules, newSchedule])
     }
+  }
 
-    setIsModalOpen(false)
+  const handleDelete = async (id) => {
+    if (window.confirm('Yakin ingin menghapus jadwal pakan ini?')) {
+      triggerHaptic(50)
+      if (onDeleteSchedule) {
+        await onDeleteSchedule(id)
+      } else if (onUpdateSchedules) {
+        const updated = schedules.filter((s) => s.id !== id)
+        onUpdateSchedules(updated)
+      }
+    }
+  }
+
+  const handleSave = async (e) => {
+    e.preventDefault()
+    triggerHaptic(50)
+    setIsSaving(true)
+
+    try {
+      if (editingSchedule) {
+        // Edit existing schedule
+        const scheduleData = {
+          time,
+          duration_ms: Number(duration),
+          days
+        }
+        if (onEditSchedule) {
+          await onEditSchedule(editingSchedule.id, scheduleData)
+        } else if (onUpdateSchedules) {
+          const updated = schedules.map((s) => 
+            s.id === editingSchedule.id 
+              ? { ...s, ...scheduleData } 
+              : s
+          )
+          onUpdateSchedules(updated)
+        }
+      } else {
+        // Add new schedule
+        const scheduleData = {
+          time,
+          duration_ms: Number(duration),
+          days,
+          enabled: true
+        }
+        if (onAddSchedule) {
+          await onAddSchedule(scheduleData)
+        } else if (onUpdateSchedules) {
+          const newSchedule = {
+            id: Date.now(),
+            ...scheduleData,
+            synced: true
+          }
+          onUpdateSchedules([...schedules, newSchedule])
+        }
+      }
+      setIsModalOpen(false)
+    } catch (err) {
+      alert(`Gagal menyimpan jadwal: ${err.message}`)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -161,7 +201,7 @@ export function ScheduleManager({ schedules, onUpdateSchedules, triggerHaptic })
                   <input
                     type="checkbox"
                     checked={sch.enabled}
-                    onChange={() => handleToggle(sch.id)}
+                    onChange={() => handleToggle(sch)}
                     aria-label={`Status aktif jadwal jam ${sch.time}`}
                   />
                   <span className="slider" />

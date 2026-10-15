@@ -48,8 +48,24 @@ export default function App() {
   // System Thresholds (PRD Section 13.1)
   const [thresholds, setThresholds] = useState(INITIAL_THRESHOLDS)
 
-  // Schedules (PRD Section 13 & D-04)
-  const [schedules, setSchedules] = useState(INITIAL_SCHEDULES)
+  // Schedules (PRD Section 13 & D-04) with localStorage caching
+  const [schedules, setSchedules] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sipio_schedules')
+      return saved ? JSON.parse(saved) : INITIAL_SCHEDULES
+    } catch {
+      return INITIAL_SCHEDULES
+    }
+  })
+
+  // Persist schedules to localStorage whenever they change
+  useEffect(() => {
+    try {
+      if (Array.isArray(schedules) && schedules.length > 0) {
+        localStorage.setItem('sipio_schedules', JSON.stringify(schedules))
+      }
+    } catch {}
+  }, [schedules])
 
   // Feed Logs (PRD Section 13 & D-05)
   const [feedLogs, setFeedLogs] = useState(INITIAL_FEED_LOGS)
@@ -107,7 +123,12 @@ export default function App() {
   }, [])
 
   const handleSchedulesUpdate = useCallback((newSchedules) => {
-    setSchedules(newSchedules)
+    if (Array.isArray(newSchedules)) {
+      setSchedules(newSchedules)
+      try {
+        localStorage.setItem('sipio_schedules', JSON.stringify(newSchedules))
+      } catch {}
+    }
   }, [])
 
   const handleThresholdsUpdate = useCallback((newThresholds) => {
@@ -127,6 +148,100 @@ export default function App() {
     onCameraUpdate: handleCameraUpdate
   })
 
+  // Persistent Schedule Handlers (MySQL REST API + MQTT LittleFS Sync + Local Storage)
+  const handleAddSchedule = useCallback(async (scheduleData) => {
+    try {
+      let created = null
+      if (iotConnection.backendOnline) {
+        created = await api.createSchedule({
+          time: scheduleData.time,
+          duration_ms: Number(scheduleData.duration_ms) || 2000,
+          days: scheduleData.days || 'Setiap Hari'
+        })
+      }
+      if (!created || !created.id) {
+        created = {
+          id: Date.now(),
+          ...scheduleData,
+          synced: false
+        }
+      }
+      setSchedules((prev) => {
+        if (prev.some((s) => s.id === created.id)) return prev
+        const updated = [...prev, created]
+        try { localStorage.setItem('sipio_schedules', JSON.stringify(updated)) } catch {}
+        return updated
+      })
+      pwaState.triggerHaptic(40)
+      return created
+    } catch (err) {
+      console.warn('Backend create schedule error, fallback to local storage:', err)
+      const localItem = {
+        id: Date.now(),
+        ...scheduleData,
+        synced: false
+      }
+      setSchedules((prev) => {
+        const updated = [...prev, localItem]
+        try { localStorage.setItem('sipio_schedules', JSON.stringify(updated)) } catch {}
+        return updated
+      })
+      pwaState.triggerHaptic(40)
+      return localItem
+    }
+  }, [iotConnection.backendOnline, pwaState])
+
+  const handleEditSchedule = useCallback(async (id, scheduleData) => {
+    setSchedules((prev) => {
+      const updated = prev.map((s) => (s.id === id ? { ...s, ...scheduleData } : s))
+      try { localStorage.setItem('sipio_schedules', JSON.stringify(updated)) } catch {}
+      return updated
+    })
+    pwaState.triggerHaptic(40)
+
+    try {
+      if (iotConnection.backendOnline) {
+        await api.updateSchedule(id, scheduleData)
+      }
+    } catch (err) {
+      console.warn('Backend update schedule error:', err)
+    }
+  }, [iotConnection.backendOnline, pwaState])
+
+  const handleToggleSchedule = useCallback(async (id, newEnabled) => {
+    setSchedules((prev) => {
+      const updated = prev.map((s) => (s.id === id ? { ...s, enabled: newEnabled } : s))
+      try { localStorage.setItem('sipio_schedules', JSON.stringify(updated)) } catch {}
+      return updated
+    })
+    pwaState.triggerHaptic(30)
+
+    try {
+      if (iotConnection.backendOnline) {
+        await api.updateSchedule(id, { enabled: newEnabled })
+      }
+    } catch (err) {
+      console.warn('Backend toggle schedule error:', err)
+    }
+  }, [iotConnection.backendOnline, pwaState])
+
+  const handleDeleteSchedule = useCallback(async (id) => {
+    setSchedules((prev) => {
+      const updated = prev.filter((s) => s.id !== id)
+      try { localStorage.setItem('sipio_schedules', JSON.stringify(updated)) } catch {}
+      return updated
+    })
+    pwaState.triggerHaptic(50)
+
+    try {
+      if (iotConnection.backendOnline) {
+        await api.deleteSchedule(id)
+      }
+    } catch (err) {
+      console.warn('Backend delete schedule error:', err)
+    }
+  }, [iotConnection.backendOnline, pwaState])
+
   // Sinkronisasi data awal dari database MySQL / FastAPI backend saat terhubung
   useEffect(() => {
     if (!iotConnection.backendOnline) return
@@ -142,6 +257,9 @@ export default function App() {
     api.getSchedules().then((scheds) => {
       if (Array.isArray(scheds) && scheds.length > 0) {
         setSchedules(scheds)
+        try {
+          localStorage.setItem('sipio_schedules', JSON.stringify(scheds))
+        } catch {}
       }
     }).catch(() => {})
 
@@ -295,6 +413,9 @@ export default function App() {
     setCamStatus({ online: true })
     setThresholds(INITIAL_THRESHOLDS)
     setSchedules(INITIAL_SCHEDULES)
+    try {
+      localStorage.removeItem('sipio_schedules')
+    } catch {}
     setFeedLogs(INITIAL_FEED_LOGS)
     setTempHistory(INITIAL_TEMP_HISTORY)
     setDismissedAlertIds([])
@@ -362,6 +483,10 @@ export default function App() {
           {/* Schedule Manager (D-04) */}
           <ScheduleManager
             schedules={schedules}
+            onAddSchedule={handleAddSchedule}
+            onEditSchedule={handleEditSchedule}
+            onToggleSchedule={handleToggleSchedule}
+            onDeleteSchedule={handleDeleteSchedule}
             onUpdateSchedules={setSchedules}
             triggerHaptic={pwaState.triggerHaptic}
           />

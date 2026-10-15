@@ -88,7 +88,7 @@ export function FeedActionCard({
 
             setTimeout(() => {
               setFeedingState('idle')
-            }, 2000)
+            }, 1000)
             return 0
           }
           return +(prev - 0.2).toFixed(1)
@@ -161,9 +161,18 @@ export function FeedActionCard({
           >
             {feedingState === 'idle' && (
               <>
-                <Play size={18} fill="currentColor" />
-                <span className="btn-feed-text">Beri Pakan Sekarang</span>
-                <span className="btn-feed-chip">{duration}ms</span>
+                {isWaterLow ? (
+                  <>
+                    <AlertCircle size={18} />
+                    <span className="btn-feed-text">Level Air Rendah — Feeder Terkunci</span>
+                  </>
+                ) : (
+                  <>
+                    <Play size={18} fill="currentColor" />
+                    <span className="btn-feed-text">Beri Pakan Sekarang</span>
+                    <span className="btn-feed-chip">{duration}ms</span>
+                  </>
+                )}
               </>
             )}
 
