@@ -1,14 +1,18 @@
 // Centralized API Client for SiPIO FastAPI Backend
 
+const isLocalEnv = typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname === '[::1]'
+)
+
 const API_BASE = import.meta.env.VITE_API_URL || (
-  typeof window !== 'undefined' && window.location.hostname === 'localhost'
-    ? 'http://localhost:8000/api'
-    : '/api'
+  isLocalEnv ? 'http://127.0.0.1:8000/api' : '/api'
 )
 
 export const WS_URL = import.meta.env.VITE_WS_URL || (
-  typeof window !== 'undefined' && window.location.hostname === 'localhost'
-    ? 'ws://localhost:8000/ws/telemetry'
+  isLocalEnv
+    ? 'ws://127.0.0.1:8000/ws/telemetry'
     : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/telemetry`
 )
 
@@ -57,6 +61,12 @@ export const api = {
     return fetchJson('/feed', {
       method: 'POST',
       body: JSON.stringify({ duration_ms, source })
+    })
+  },
+
+  async resetFeedCooldown() {
+    return fetchJson('/feed/reset-cooldown', {
+      method: 'POST'
     })
   },
 

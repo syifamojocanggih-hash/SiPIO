@@ -67,8 +67,24 @@ export default function App() {
     } catch {}
   }, [schedules])
 
-  // Feed Logs (PRD Section 13 & D-05)
-  const [feedLogs, setFeedLogs] = useState(INITIAL_FEED_LOGS)
+  // Feed Logs (PRD Section 13 & D-05) with localStorage caching
+  const [feedLogs, setFeedLogs] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sipio_feed_logs')
+      return saved ? JSON.parse(saved) : INITIAL_FEED_LOGS
+    } catch {
+      return INITIAL_FEED_LOGS
+    }
+  })
+
+  // Persist feedLogs to localStorage whenever they change
+  useEffect(() => {
+    try {
+      if (Array.isArray(feedLogs) && feedLogs.length > 0) {
+        localStorage.setItem('sipio_feed_logs', JSON.stringify(feedLogs))
+      }
+    } catch {}
+  }, [feedLogs])
 
   // Temperature Historical Dataset (D-02)
   const [tempHistory, setTempHistory] = useState(INITIAL_TEMP_HISTORY)
@@ -105,6 +121,7 @@ export default function App() {
     try {
       localStorage.removeItem('sipio_last_feed_time')
     } catch {}
+    api.resetFeedCooldown().catch(() => {})
     pwaState.triggerHaptic(40)
   }, [pwaState])
 
@@ -398,9 +415,16 @@ export default function App() {
     }
 
     // Local simulation fallback
+    const nowObj = new Date()
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+    const day = String(nowObj.getDate()).padStart(2, '0')
+    const month = months[nowObj.getMonth()]
+    const year = nowObj.getFullYear()
+    const timeStr = nowObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+
     const newEntry = {
       id: Date.now(),
-      timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      timestamp: `${day} ${month} ${year} ${timeStr}`,
       ...newFeedEvent
     }
     setFeedLogs((prev) => [newEntry, ...prev])
@@ -417,6 +441,9 @@ export default function App() {
       localStorage.removeItem('sipio_schedules')
     } catch {}
     setFeedLogs(INITIAL_FEED_LOGS)
+    try {
+      localStorage.removeItem('sipio_feed_logs')
+    } catch {}
     setTempHistory(INITIAL_TEMP_HISTORY)
     setDismissedAlertIds([])
     handleResetCooldown()
