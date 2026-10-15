@@ -53,20 +53,12 @@ export const INITIAL_SCHEDULES = [
 
 export const INITIAL_FEED_LOGS = [
   {
-    id: 101,
-    timestamp: '14 Okt 2026 07:00:03',
-    source: 'Jadwal Otomatis',
-    duration_ms: 2000,
-    result: 'done',
-    reason: 'Selesai tepat waktu (deviasi < 1.2 detik)'
-  },
-  {
-    id: 102,
-    timestamp: '14 Okt 2026 12:30:04',
-    source: 'Jadwal Otomatis',
-    duration_ms: 1500,
-    result: 'done',
-    reason: 'Selesai tepat waktu (deviasi < 0.8 detik)'
+    id: 104,
+    timestamp: '14 Okt 2026 14:35:10',
+    source: 'Manual (Dashboard)',
+    duration_ms: 1000,
+    result: 'skipped',
+    reason: 'Jeda belum cukup (< 30 menit dari pakan sebelumnya)'
   },
   {
     id: 103,
@@ -77,12 +69,20 @@ export const INITIAL_FEED_LOGS = [
     reason: 'Diberikan manual via tombol feeder'
   },
   {
-    id: 104,
-    timestamp: '14 Okt 2026 14:35:10',
-    source: 'Manual (Dashboard)',
-    duration_ms: 1000,
-    result: 'skipped',
-    reason: 'Jeda belum cukup (< 30 menit dari pakan sebelumnya)'
+    id: 102,
+    timestamp: '14 Okt 2026 12:30:04',
+    source: 'Jadwal Otomatis',
+    duration_ms: 1500,
+    result: 'done',
+    reason: 'Selesai tepat waktu (deviasi < 0.8 detik)'
+  },
+  {
+    id: 101,
+    timestamp: '14 Okt 2026 07:00:03',
+    source: 'Jadwal Otomatis',
+    duration_ms: 2000,
+    result: 'done',
+    reason: 'Selesai tepat waktu (deviasi < 1.2 detik)'
   }
 ]
 

@@ -75,7 +75,10 @@ export function MetricsOverview({ telemetry, thresholds, lastFeed }) {
           </div>
         </div>
 
-        <div className="metric-value-row">
+        <div 
+          className="metric-value-row"
+          title={lastFeed?.fullTimestamp ? `Waktu pakan: ${lastFeed.fullTimestamp}` : undefined}
+        >
           <span className="metric-big-num" style={{ fontSize: '1.5rem' }}>
             {lastFeed ? lastFeed.time : '--:--'}
           </span>
@@ -83,7 +86,7 @@ export function MetricsOverview({ telemetry, thresholds, lastFeed }) {
         </div>
 
         <div className="metric-footer">
-          <span className="status-tag success">
+          <span className={`status-tag ${lastFeed ? (lastFeed.resultRaw === 'done' || lastFeed.result === 'Sukses' ? 'success' : lastFeed.resultRaw === 'skipped' ? 'warning' : 'danger') : 'success'}`}>
             {lastFeed ? `${lastFeed.source} (${lastFeed.duration_ms}ms)` : 'Siap'}
           </span>
           <span className="text-dim">Hasil: {lastFeed ? lastFeed.result : '-'}</span>

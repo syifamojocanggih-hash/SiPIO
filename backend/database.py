@@ -1,7 +1,7 @@
 import os
 import time
 from typing import Generator
-from sqlalchemy import create_engine, String, Float, Boolean, Integer
+from sqlalchemy import create_engine, String, Float, Boolean, Integer, BigInteger
 from sqlalchemy.orm import declarative_base, sessionmaker, Session, Mapped, mapped_column
 
 try:
@@ -48,7 +48,7 @@ class TelemetryLogModel(Base):
     temp: Mapped[float] = mapped_column(Float, nullable=False)
     level_ok: Mapped[bool] = mapped_column(Boolean, default=True)
     rssi: Mapped[int] = mapped_column(Integer, default=-61)
-    timestamp: Mapped[int] = mapped_column(Integer, default=lambda: int(time.time() * 1000))
+    timestamp: Mapped[int] = mapped_column(BigInteger, default=lambda: int(time.time() * 1000))
 
 class FeedLogModel(Base):
     """Merekam jejak audit eksekusi pakan (jadwal vs manual)"""

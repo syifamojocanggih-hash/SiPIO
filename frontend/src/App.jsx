@@ -23,6 +23,35 @@ import {
   INITIAL_TEMP_HISTORY
 } from './data/mockIoT'
 
+const MONTH_MAP = {
+  jan: 0, feb: 1, mar: 2, apr: 3, mei: 4, may: 4, jun: 5,
+  jul: 6, agu: 7, aug: 7, sep: 8, okt: 9, oct: 9, nov: 10, des: 11, dec: 11
+}
+
+export function parseFeedLogTimestamp(timestampStr) {
+  if (!timestampStr) return null
+  if (typeof timestampStr === 'number') {
+    const d = new Date(timestampStr)
+    return isNaN(d.getTime()) ? null : d
+  }
+  const str = String(timestampStr).trim()
+  const parts = str.split(/\s+/)
+  if (parts.length >= 4) {
+    const day = parseInt(parts[0], 10)
+    const mKey = parts[1].toLowerCase().slice(0, 3)
+    const month = MONTH_MAP[mKey] ?? 0
+    const year = parseInt(parts[2], 10)
+    const timeParts = parts[3].replace('.', ':').split(':')
+    const hours = parseInt(timeParts[0], 10) || 0
+    const mins = parseInt(timeParts[1], 10) || 0
+    const secs = parseInt(timeParts[2], 10) || 0
+    const parsed = new Date(year, month, day, hours, mins, secs)
+    if (!isNaN(parsed.getTime())) return parsed
+  }
+  const d = new Date(str)
+  return isNaN(d.getTime()) ? null : d
+}
+
 export default function App() {
   // Theme state: 'light' by default for optimal outdoor sunlight readability (SiPIO White & Blue)
   const [theme, setTheme] = useState(() => {
@@ -284,6 +313,13 @@ export default function App() {
     api.getLogs().then((logs) => {
       if (Array.isArray(logs) && logs.length > 0) {
         setFeedLogs(logs)
+        const lastSuccess = logs.find((l) => l.result === 'done')
+        if (lastSuccess) {
+          const parsed = parseFeedLogTimestamp(lastSuccess.timestamp)
+          if (parsed) {
+            setLastFeedTimestamp((prev) => (prev > 0 ? prev : parsed.getTime()))
+          }
+        }
       }
     }).catch(() => {})
 
@@ -295,15 +331,69 @@ export default function App() {
     }).catch(() => {})
   }, [iotConnection.backendOnline])
 
-  // Last feed info
-  const lastFeed = feedLogs.length > 0 ? {
-    time: feedLogs[0].timestamp.split(' ')[2] || feedLogs[0].timestamp || '07:00',
-    relative: 'Terkini',
-    source: feedLogs[0].source,
-    duration_ms: feedLogs[0].duration_ms,
-    result: feedLogs[0].result === 'done' ? 'Sukses' : 'Ditunda',
-    timestamp: Date.now() - 3600000 // 1 hour ago
-  } : null
+  // Last feed info: dihitung secara presisi dari entri log pakan terbaru (feedLogs)
+  const lastFeed = (() => {
+    if (!Array.isArray(feedLogs) || feedLogs.length === 0) return null
+
+    // Ambil riwayat pakan terbaru (utamakan yang berhasil jika ada agar status pakan valid)
+    const targetLog = feedLogs.find((l) => l.result === 'done') || feedLogs[0]
+    const parsedDate = parseFeedLogTimestamp(targetLog.timestamp)
+
+    let timeStr = '--:--'
+    let relativeStr = 'Terkini'
+    let epochMs = 0
+
+    if (parsedDate) {
+      epochMs = parsedDate.getTime()
+      const hours = String(parsedDate.getHours()).padStart(2, '0')
+      const mins = String(parsedDate.getMinutes()).padStart(2, '0')
+      timeStr = `${hours}:${mins}`
+
+      const now = new Date()
+      const isToday =
+        now.getFullYear() === parsedDate.getFullYear() &&
+        now.getMonth() === parsedDate.getMonth() &&
+        now.getDate() === parsedDate.getDate()
+
+      const yesterday = new Date(now)
+      yesterday.setDate(now.getDate() - 1)
+      const isYesterday =
+        yesterday.getFullYear() === parsedDate.getFullYear() &&
+        yesterday.getMonth() === parsedDate.getMonth() &&
+        yesterday.getDate() === parsedDate.getDate()
+
+      if (isToday) {
+        relativeStr = 'Hari ini'
+      } else if (isYesterday) {
+        relativeStr = 'Kemarin'
+      } else {
+        const idMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+        relativeStr = `${parsedDate.getDate()} ${idMonths[parsedDate.getMonth()]}`
+      }
+    } else {
+      const parts = String(targetLog.timestamp || '').trim().split(/\s+/)
+      if (parts.length >= 4) {
+        timeStr = parts[3].replace('.', ':').slice(0, 5)
+        relativeStr = `${parts[0]} ${parts[1]}`
+      } else if (parts.length === 1 && parts[0].includes(':')) {
+        timeStr = parts[0].slice(0, 5)
+        relativeStr = 'Hari ini'
+      } else {
+        timeStr = targetLog.timestamp || '--:--'
+      }
+    }
+
+    return {
+      time: timeStr,
+      relative: relativeStr,
+      source: targetLog.source || 'Manual (Dashboard)',
+      duration_ms: targetLog.duration_ms || 2000,
+      result: targetLog.result === 'done' ? 'Sukses' : targetLog.result === 'skipped' ? 'Ditunda' : 'Gagal',
+      resultRaw: targetLog.result,
+      timestamp: epochMs || Date.now(),
+      fullTimestamp: targetLog.timestamp
+    }
+  })()
 
   // Active alerts list (D-07)
   const [dismissedAlertIds, setDismissedAlertIds] = useState([])
