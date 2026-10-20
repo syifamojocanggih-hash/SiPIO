@@ -1,6 +1,6 @@
 # SiPIO Design System & Tokens
 > **Sistem Pemberi Pakan Ikan Otomatis (IoT)**  
-> Filosofi Desain: **Simple White & Blue — High Contrast Outdoor Ready**
+> Filosofi Desain: **Simple White & Blue - High Contrast Outdoor Ready**
 
 Dokumen ini mendefinisikan standar visual, token CSS, dan pedoman antarmuka untuk aplikasi SiPIO. Desain dirancang khusus agar **mudah dibaca di bawah sinar matahari langsung (high sunlight contrast)** oleh petani tambak dan hobiis akuakultur, responsif mobile-first, serta menggunakan tipografi modern yang tajam.
 
@@ -29,7 +29,7 @@ Dokumen ini mendefinisikan standar visual, token CSS, dan pedoman antarmuka untu
 
 Palet warna dibatasi pada 2 warna inti (Putih & Biru Terang) ditambah warna netral berdaya kontras tinggi dan 3 warna status fungsional.
 
-### 3.1 Mode Terang (Default — Mode Siang Kolam)
+### 3.1 Mode Terang (Default - Mode Siang Kolam)
 Mode utama untuk keterbacaan optimal di bawah sinar matahari langsung:
 
 | Token CSS | Nilai Hex | Peran / Penggunaan | Rasio Kontras (vs Surface) |

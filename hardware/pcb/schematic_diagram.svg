@@ -1,0 +1,236 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 850" width="100%" height="100%" style="background:#0f172a; font-family:'Segoe UI', Inter, sans-serif;">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="nodemcuGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="moduleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a5f"/>
+      <stop offset="100%" stop-color="#0c2340"/>
+    </linearGradient>
+    <linearGradient id="camGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2e1065"/>
+      <stop offset="100%" stop-color="#17072b"/>
+    </linearGradient>
+    <!-- Shadows -->
+    <filter id="dropShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Title Header -->
+  <rect x="30" y="25" width="1040" height="70" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="2" filter="url(#dropShadow)"/>
+  <text x="60" y="60" fill="#38bdf8" font-size="22" font-weight="bold">SiPIO v1.3 - Skematik Wiring Rangkaian PCB Utama &amp; Modul</text>
+  <text x="60" y="82" fill="#94a3b8" font-size="13">Sistem Pakan Ikan Otomatis IoT: NodeMCU ESP8266, DS18B20, Float Switch, Servo &amp; ESP32-CAM</text>
+
+  <!-- 1. POWER SUPPLY INPUT BLOCK -->
+  <g id="power_block" filter="url(#dropShadow)">
+    <rect x="40" y="130" width="210" height="170" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="2"/>
+    <rect x="40" y="130" width="210" height="32" rx="8" fill="#ef4444"/>
+    <text x="55" y="152" fill="#ffffff" font-size="14" font-weight="bold">POWER INPUT (5V 2A)</text>
+    
+    <circle cx="70" cy="195" r="10" fill="#ef4444"/>
+    <text x="95" y="200" fill="#f8fafc" font-size="13" font-weight="600">+5V DC (VCC)</text>
+    
+    <circle cx="70" cy="245" r="10" fill="#3b82f6"/>
+    <text x="95" y="250" fill="#f8fafc" font-size="13" font-weight="600">GND (Ground)</text>
+    
+    <text x="55" y="285" fill="#94a3b8" font-size="11">Terminal Screw 2-Pin 5.08mm</text>
+  </g>
+
+  <!-- 2. CAPACITOR STABILIZER BLOCK -->
+  <g id="capacitor_block" filter="url(#dropShadow)">
+    <rect x="40" y="330" width="210" height="150" rx="8" fill="#1e293b" stroke="#eab308" stroke-width="2"/>
+    <rect x="40" y="330" width="210" height="32" rx="8" fill="#eab308"/>
+    <text x="50" y="352" fill="#0f172a" font-size="13" font-weight="bold">BUFFER CAPACITOR</text>
+    
+    <circle cx="80" cy="405" r="22" fill="#0284c7" stroke="#38bdf8" stroke-width="2"/>
+    <text x="73" y="411" fill="#ffffff" font-size="15" font-weight="bold">C</text>
+    <text x="115" y="400" fill="#f8fafc" font-size="13" font-weight="bold">1000 µF / 16V</text>
+    <text x="115" y="420" fill="#94a3b8" font-size="11">Low-ESR Electrolytic</text>
+    <text x="55" y="460" fill="#cbd5e1" font-size="11">Meredam inrush current servo</text>
+  </g>
+
+  <!-- 3. CENTRAL NODEMCU ESP8266 BLOCK -->
+  <g id="esp8266_block" filter="url(#dropShadow)">
+    <rect x="350" y="130" width="380" height="520" rx="12" fill="url(#nodemcuGrad)" stroke="#38bdf8" stroke-width="2.5"/>
+    <rect x="350" y="130" width="380" height="44" rx="12" fill="#0284c7"/>
+    <text x="420" y="158" fill="#ffffff" font-size="16" font-weight="bold">NODEMCU ESP8266 (ESP-12E)</text>
+    <text x="445" y="190" fill="#38bdf8" font-size="12" font-weight="600">WiFi 802.11 b/g/n + Microcontroller</text>
+
+    <!-- Antenna representation -->
+    <path d="M 670,140 L 710,140 L 710,165 L 670,165 Z" fill="#ca8a04" stroke="#eab308" stroke-width="1.5"/>
+    <text x="676" y="157" fill="#ffffff" font-size="10" font-weight="bold">PCB ANT</text>
+
+    <!-- NodeMCU Pin Header Left -->
+    <g id="pins_left">
+      <!-- VIN Pin -->
+      <circle cx="365" cy="225" r="8" fill="#ef4444"/>
+      <text x="385" y="230" fill="#ef4444" font-size="13" font-weight="bold">VIN (5V In)</text>
+
+      <!-- GND Pin -->
+      <circle cx="365" cy="275" r="8" fill="#3b82f6"/>
+      <text x="385" y="280" fill="#38bdf8" font-size="13" font-weight="bold">GND (Common)</text>
+
+      <!-- 3V3 Pin -->
+      <circle cx="365" cy="325" r="8" fill="#f97316"/>
+      <text x="385" y="330" fill="#f97316" font-size="13" font-weight="bold">3V3 (Out)</text>
+
+      <!-- D1 (GPIO5) Pin -->
+      <circle cx="365" cy="395" r="8" fill="#22c55e"/>
+      <text x="385" y="400" fill="#4ade80" font-size="13" font-weight="bold">D1 (GPIO5) - SERVO PWM</text>
+
+      <!-- D2 (GPIO4) Pin -->
+      <circle cx="365" cy="465" r="8" fill="#a855f7"/>
+      <text x="385" y="470" fill="#c084fc" font-size="13" font-weight="bold">D2 (GPIO4) - DS18B20 ONE-WIRE</text>
+
+      <!-- D5 (GPIO14) Pin -->
+      <circle cx="365" cy="535" r="8" fill="#06b6d4"/>
+      <text x="385" y="540" fill="#22d3ee" font-size="13" font-weight="bold">D5 (GPIO14) - FLOAT SWITCH</text>
+
+      <!-- D4 (GPIO2) Pin -->
+      <circle cx="365" cy="605" r="8" fill="#eab308"/>
+      <text x="385" y="610" fill="#fde047" font-size="13" font-weight="bold">D4 (GPIO2) - ONBOARD LED</text>
+    </g>
+
+    <!-- NodeMCU Socket Footprint indicator -->
+    <rect x="360" y="210" width="12" height="415" rx="3" fill="none" stroke="#475569" stroke-dasharray="3,3"/>
+    <rect x="708" y="210" width="12" height="415" rx="3" fill="none" stroke="#475569" stroke-dasharray="3,3"/>
+    <text x="495" y="635" fill="#64748b" font-size="11">Header Female 1x15 Pin (Dapat Dilepas)</text>
+  </g>
+
+  <!-- 4. PULL-UP RESISTOR 4.7kΩ BLOCK -->
+  <g id="resistor_block" filter="url(#dropShadow)">
+    <rect x="490" y="345" width="180" height="80" rx="6" fill="#1e293b" stroke="#f97316" stroke-width="1.5"/>
+    <rect x="545" y="375" width="65" height="20" rx="3" fill="#334155" stroke="#f97316" stroke-width="1.5"/>
+    <!-- Resistor color bands -->
+    <line x1="560" y1="375" x2="560" y2="395" stroke="#eab308" stroke-width="3"/>
+    <line x1="572" y1="375" x2="572" y2="395" stroke="#a855f7" stroke-width="3"/>
+    <line x1="584" y1="375" x2="584" y2="395" stroke="#ef4444" stroke-width="3"/>
+    <line x1="596" y1="375" x2="596" y2="395" stroke="#fbbf24" stroke-width="2"/>
+    <text x="535" y="365" fill="#f97316" font-size="12" font-weight="bold">Pull-Up 4.7 kΩ</text>
+    <text x="515" y="412" fill="#94a3b8" font-size="10">Antara 3.3V &amp; D2 (GPIO4)</text>
+  </g>
+
+  <!-- 5. SENSOR TERMINAL 1: DS18B20 WATERPROOF -->
+  <g id="ds18b20_block" filter="url(#dropShadow)">
+    <rect x="830" y="130" width="230" height="140" rx="8" fill="#1e293b" stroke="#a855f7" stroke-width="2"/>
+    <rect x="830" y="130" width="230" height="30" rx="8" fill="#a855f7"/>
+    <text x="845" y="151" fill="#ffffff" font-size="13" font-weight="bold">DS18B20 PROBE (SUHU)</text>
+    
+    <circle cx="850" cy="180" r="7" fill="#f97316"/>
+    <text x="868" y="185" fill="#f8fafc" font-size="12">VCC (Kabel Merah) -&gt; 3V3</text>
+    
+    <circle cx="850" cy="210" r="7" fill="#a855f7"/>
+    <text x="868" y="215" fill="#f8fafc" font-size="12">DATA (Kuning) -&gt; D2</text>
+    
+    <circle cx="850" cy="240" r="7" fill="#3b82f6"/>
+    <text x="868" y="245" fill="#f8fafc" font-size="12">GND (Hitam) -&gt; GND</text>
+  </g>
+
+  <!-- 6. SENSOR TERMINAL 2: FLOAT SWITCH -->
+  <g id="float_block" filter="url(#dropShadow)">
+    <rect x="830" y="295" width="230" height="125" rx="8" fill="#1e293b" stroke="#06b6d4" stroke-width="2"/>
+    <rect x="830" y="295" width="230" height="30" rx="8" fill="#06b6d4"/>
+    <text x="845" y="316" fill="#ffffff" font-size="13" font-weight="bold">FLOAT SWITCH (LEVEL)</text>
+    
+    <circle cx="850" cy="350" r="7" fill="#06b6d4"/>
+    <text x="868" y="355" fill="#f8fafc" font-size="12">PIN 1 -&gt; D5 (INPUT_PULLUP)</text>
+    
+    <circle cx="850" cy="385" r="7" fill="#3b82f6"/>
+    <text x="868" y="390" fill="#f8fafc" font-size="12">PIN 2 -&gt; GND (Common)</text>
+  </g>
+
+  <!-- 7. ACTUATOR TERMINAL 3: SERVO MOTOR -->
+  <g id="servo_block" filter="url(#dropShadow)">
+    <rect x="830" y="445" width="230" height="155" rx="8" fill="#1e293b" stroke="#22c55e" stroke-width="2"/>
+    <rect x="830" y="445" width="230" height="30" rx="8" fill="#22c55e"/>
+    <text x="845" y="466" fill="#ffffff" font-size="13" font-weight="bold">SERVO SG90/MG90S (FEEDER)</text>
+    
+    <circle cx="850" cy="500" r="7" fill="#22c55e"/>
+    <text x="868" y="505" fill="#f8fafc" font-size="12">PWM (Oranye) -&gt; D1 (GPIO5)</text>
+    
+    <circle cx="850" cy="535" r="7" fill="#ef4444"/>
+    <text x="868" y="540" fill="#f8fafc" font-size="12">VCC 5V (Merah) -&gt; Rel Daya 5V</text>
+    
+    <circle cx="850" cy="570" r="7" fill="#3b82f6"/>
+    <text x="868" y="575" fill="#f8fafc" font-size="12">GND (Cokelat) -&gt; GND</text>
+  </g>
+
+  <!-- 8. EXTERNAL ESP32-CAM MODULE BLOCK -->
+  <g id="esp32cam_block" filter="url(#dropShadow)">
+    <rect x="40" y="515" width="280" height="165" rx="8" fill="url(#camGrad)" stroke="#c084fc" stroke-width="2"/>
+    <rect x="40" y="515" width="280" height="32" rx="8" fill="#9333ea"/>
+    <text x="55" y="537" fill="#ffffff" font-size="13" font-weight="bold">ESP32-CAM AI-THINKER (TERPISAH)</text>
+    
+    <circle cx="85" cy="605" r="24" fill="#1e1b4b" stroke="#c084fc" stroke-width="2"/>
+    <circle cx="85" cy="605" r="10" fill="#0284c7"/>
+    <text x="60" y="645" fill="#e9d5ff" font-size="10" font-weight="600">OV2640 Lens</text>
+
+    <text x="130" y="575" fill="#ef4444" font-size="12" font-weight="bold">5V Input -&gt; Catu 5V 2A</text>
+    <text x="130" y="595" fill="#38bdf8" font-size="12" font-weight="bold">GND -&gt; Common GND</text>
+    <text x="130" y="620" fill="#cbd5e1" font-size="11">WiFi HTTP Upload Langsung</text>
+    <text x="130" y="638" fill="#94a3b8" font-size="10">(Bebas dari beban pin ESP8266)</text>
+    <text x="55" y="668" fill="#e2e8f0" font-size="10">Dipasang di sisi feeder menghadap kolam &amp; hopper</text>
+  </g>
+
+  <!-- WIRING TRACES & BUSSES -->
+  <!-- 5V Rail (Red) -->
+  <path d="M 70,195 L 70,225 L 365,225" fill="none" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 70,195 L 30,195 L 30,490 L 800,490 L 800,535 L 850,535" fill="none" stroke="#ef4444" stroke-width="3" stroke-linecap="round" stroke-dasharray="6,3"/>
+  <circle cx="70" cy="195" r="4" fill="#ef4444"/>
+  <circle cx="850" cy="535" r="4" fill="#ef4444"/>
+
+  <!-- GND Rail (Blue) -->
+  <path d="M 70,245 L 70,275 L 365,275" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 70,275 L 70,405 L 80,405" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="70" cy="275" r="4" fill="#38bdf8"/>
+
+  <!-- 3V3 Rail to DS18B20 & Pullup (Orange) -->
+  <path d="M 365,325 L 340,325 L 340,310 L 800,310 L 800,180 L 850,180" fill="none" stroke="#f97316" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M 490,365 L 470,365 L 470,310" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="470" cy="310" r="3" fill="#f97316"/>
+
+  <!-- D2 (GPIO4) to DS18B20 & Pullup (Purple) -->
+  <path d="M 365,465 L 760,465 L 760,210 L 850,210" fill="none" stroke="#c084fc" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M 670,385 L 760,385" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="760" cy="385" r="3" fill="#c084fc"/>
+
+  <!-- D5 (GPIO14) to Float Switch (Cyan) -->
+  <path d="M 365,535 L 780,535 L 780,350 L 850,350" fill="none" stroke="#22d3ee" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- D1 (GPIO5) to Servo PWM (Green) -->
+  <path d="M 365,395 L 320,395 L 320,480 L 820,480 L 820,500 L 850,500" fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Float & DS18B20 GND return (Blue dashed) -->
+  <path d="M 850,240 L 810,240 L 810,275 L 700,275" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,3"/>
+  <path d="M 850,390 L 810,390 L 810,275" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,3"/>
+  <path d="M 850,570 L 810,570 L 810,275" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="4,3"/>
+
+  <!-- FOOTER & LEGEND -->
+  <rect x="30" y="720" width="1040" height="105" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text x="50" y="748" fill="#f8fafc" font-size="14" font-weight="bold">Petunjuk Teknis PCB (PRD Bagian 10.3 &amp; 18):</text>
+  <text x="50" y="772" fill="#94a3b8" font-size="12">1. Jalur catu daya servo (+5V &amp; GND) wajib dibuat lebar minimal 1.2 mm - 1.5 mm untuk menangani lonjakan arus putaran.</text>
+  <text x="50" y="792" fill="#94a3b8" font-size="12">2. Kapasitor 1000 µF wajib diletakkan sedekat mungkin dengan pin daya servo guna mencegah brownout reset pada ESP8266.</text>
+  <text x="50" y="812" fill="#94a3b8" font-size="12">3. Semua sensor dan aktuator dihubungkan via Terminal Screw 5.08 mm. NodeMCU dipasang pada soket female header agar mudah dilepas.</text>
+
+  <!-- Legend Badges -->
+  <rect x="750" y="740" width="12" height="12" fill="#ef4444" rx="2"/>
+  <text x="770" y="751" fill="#f8fafc" font-size="11">+5V Power</text>
+
+  <rect x="860" y="740" width="12" height="12" fill="#38bdf8" rx="2"/>
+  <text x="880" y="751" fill="#f8fafc" font-size="11">GND</text>
+
+  <rect x="940" y="740" width="12" height="12" fill="#f97316" rx="2"/>
+  <text x="960" y="751" fill="#f8fafc" font-size="11">3.3V Out</text>
+
+  <rect x="750" y="765" width="12" height="12" fill="#4ade80" rx="2"/>
+  <text x="770" y="776" fill="#f8fafc" font-size="11">PWM Servo (D1)</text>
+
+  <rect x="860" y="765" width="12" height="12" fill="#c084fc" rx="2"/>
+  <text x="880" y="776" fill="#f8fafc" font-size="11">One-Wire (D2)</text>
+
+  <rect x="940" y="765" width="12" height="12" fill="#22d3ee" rx="2"/>
+  <text x="960" y="776" fill="#f8fafc" font-size="11">Float (D5)</text>
+</svg>

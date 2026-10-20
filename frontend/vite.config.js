@@ -8,7 +8,19 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'sipio-icon.svg', 'camera/pond_latest.jpg', 'camera/hopper_latest.jpg'],
+      devOptions: {
+        enabled: true,
+        type: 'module'
+      },
+      includeAssets: [
+        'favicon.svg',
+        'sipio-icon.svg',
+        'pwa-192x192.png',
+        'pwa-512x512.png',
+        'apple-touch-icon.png',
+        'camera/pond_latest.jpg',
+        'camera/hopper_latest.jpg'
+      ],
       manifest: {
         id: '/?source=pwa',
         name: 'SiPIO - Smart Fish Feeder & Pond Monitoring',
@@ -26,16 +38,28 @@ export default defineConfig({
         categories: ['utilities', 'productivity', 'agriculture'],
         icons: [
           {
-            src: '/sipio-icon.svg',
-            sizes: '192x192 512x512',
-            type: 'image/svg+xml',
+            src: '/pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
             purpose: 'any'
+          },
+          {
+            src: '/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           },
           {
             src: '/sipio-icon.svg',
             sizes: '192x192 512x512',
             type: 'image/svg+xml',
-            purpose: 'maskable'
+            purpose: 'any maskable'
           }
         ],
         screenshots: [

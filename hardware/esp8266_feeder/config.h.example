@@ -23,14 +23,18 @@ const char* MQTT_USER     = "";               // Kosongkan jika tanpa autentikas
 const char* MQTT_PASSWORD = "";               // Kosongkan jika tanpa autentikasi
 const char* MQTT_CLIENT_ID= "sipio_esp8266_feeder";
 
-// Topik MQTT (Sesuai Spesifikasi PRD SiPIO)
-const char* TOPIC_TELEMETRY = "sipio/feeder/telemetry";
-const char* TOPIC_STATUS    = "sipio/feeder/status";
-const char* TOPIC_COMMAND   = "sipio/feeder/command";
-const char* TOPIC_SCHEDULES = "sipio/feeder/schedules";
+// Topik MQTT (Sesuai Spesifikasi PRD SiPIO Versi 1.3 Bagian 11)
+const char* TOPIC_TELEMETRY   = "fish/feeder01/telemetry";
+const char* TOPIC_STATUS      = "fish/feeder01/status";
+const char* TOPIC_COMMAND     = "fish/feeder01/cmd/feed";
+const char* TOPIC_EVENT_FEED  = "fish/feeder01/event/feed";
+const char* TOPIC_EVENT_SKIP  = "fish/feeder01/event/skip";
+const char* TOPIC_SCHEDULES   = "fish/feeder01/cfg/schedule";
+const char* TOPIC_THRESHOLDS  = "fish/feeder01/cfg/thresholds";
 
 // -------------------------------------------------------------
 // 3. Konfigurasi Pinout Perangkat Keras (NodeMCU / WeMos D1 Mini)
+// Sesuai PRD Tabel 10.2
 // -------------------------------------------------------------
 // Sensor Suhu DS18B20 (OneWire - gunakan resistor pull-up 4.7kΩ ke 3.3V)
 #define PIN_DS18B20         4   // D2 pada NodeMCU (GPIO4)
@@ -39,13 +43,17 @@ const char* TOPIC_SCHEDULES = "sipio/feeder/schedules";
 #define PIN_FLOAT_SWITCH    14  // D5 pada NodeMCU (GPIO14)
 #define FLOAT_ACTIVE_LOW    true // true: pelampung terhubung ke GND saat air aman
 
-// Motor Servo Pelet Pakan (TowerPro SG90 / MG995 / Continuous)
-#define PIN_SERVO           12  // D6 pada NodeMCU (GPIO12)
+// Motor Servo Pelet Pakan (PRD Tabel 10.2: Pin D1 / GPIO5)
+// Catatan: Jika rangkaian breadboard memakai D6 (GPIO12), ubah nilai di bawah menjadi 12
+#define PIN_SERVO           5   // D1 pada NodeMCU (GPIO5)
 
 // LED Indikator Status & Aktivitas Pakan
 #define PIN_LED_STATUS      2   // D4 pada NodeMCU (GPIO2 / Builtin LED)
 
-// -------------------------------------------------------------
+// Parameter Ambang Pengaman Default (PRD Section 13.1)
+#define DEFAULT_TEMP_MIN    24.0 // Batas bawah suhu layak makan (°C)
+#define DEFAULT_TEMP_MAX    32.0 // Batas atas suhu layak makan (°C)
+#define DEFAULT_MIN_GAP_MIN 30   // Jeda minimal antar pakan (menit)
 // 4. Parameter Waktu & Pengaman Sistem
 // -------------------------------------------------------------
 #define TIMEZONE_OFFSET_HOURS 7   // Waktu Indonesia Barat (WIB = UTC+7)

@@ -1,11 +1,20 @@
 import { useState, useEffect } from 'react'
 
+let globalInstallPrompt = null
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault()
+    globalInstallPrompt = e
+  })
+}
+
 export function usePWA() {
-  const [installPrompt, setInstallPrompt] = useState(null)
+  const [installPrompt, setInstallPrompt] = useState(() => globalInstallPrompt)
   const [isInstalled, setIsInstalled] = useState(false)
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false)
-  const [platform, setPlatform] = useState('android') // 'ios' | 'android' | 'desktop'
+  const [platform, setPlatform] = useState('desktop') // 'ios' | 'android' | 'desktop'
+  const [browserInfo, setBrowserInfo] = useState({ name: 'other', isChromium: false })
   const [isBannerDismissed, setIsBannerDismissed] = useState(() => {
     try {
       return sessionStorage.getItem('sipio-pwa-banner-dismissed') === 'true'
@@ -24,16 +33,29 @@ export function usePWA() {
   }
 
   useEffect(() => {
-    // Detect Platform
+    // Detect Platform & Browser
     const userAgent = window.navigator.userAgent.toLowerCase()
     const isIOSDevice = /iphone|ipad|ipod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    const isAndroid = /android/.test(userAgent)
+
     if (isIOSDevice) {
       setPlatform('ios')
-    } else if (/android/.test(userAgent)) {
+    } else if (isAndroid) {
       setPlatform('android')
     } else {
       setPlatform('desktop')
     }
+
+    const isEdge = userAgent.includes('edg/')
+    const isChrome = (userAgent.includes('chrome') || userAgent.includes('crios')) && !isEdge
+    const isFirefox = userAgent.includes('firefox')
+    const isSafari = userAgent.includes('safari') && !isChrome && !isEdge
+    setBrowserInfo({
+      isChromium: isChrome || isEdge,
+      isFirefox,
+      isSafari,
+      name: isEdge ? 'edge' : isChrome ? 'chrome' : isFirefox ? 'firefox' : isSafari ? 'safari' : 'browser'
+    })
 
     // Check standalone mode
     const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
@@ -43,11 +65,13 @@ export function usePWA() {
 
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault()
+      globalInstallPrompt = e
       setInstallPrompt(e)
     }
 
     const handleAppInstalled = () => {
       setIsInstalled(true)
+      globalInstallPrompt = null
       setInstallPrompt(null)
       setIsInstallModalOpen(false)
     }
@@ -69,16 +93,27 @@ export function usePWA() {
   }, [])
 
   const promptInstall = async () => {
-    if (installPrompt) {
-      installPrompt.prompt()
-      const { outcome } = await installPrompt.userChoice
-      if (outcome === 'accepted') {
-        setInstallPrompt(null)
-        setIsInstallModalOpen(false)
+    const promptEvent = installPrompt || globalInstallPrompt
+    if (promptEvent) {
+      try {
+        await promptEvent.prompt()
+        const choice = await promptEvent.userChoice
+        if (choice && choice.outcome === 'accepted') {
+          globalInstallPrompt = null
+          setInstallPrompt(null)
+          setIsInstallModalOpen(false)
+          return { triggered: true, outcome: 'accepted' }
+        }
+        return { triggered: true, outcome: choice ? choice.outcome : 'dismissed' }
+      } catch (err) {
+        console.warn('Install prompt error:', err)
+        setIsInstallModalOpen(true)
+        return { triggered: false, error: err }
       }
     } else {
-      // If native prompt is not available (e.g. iOS or already installed or desktop browser), show guide modal
+      // If native prompt is not available, open the guided modal
       setIsInstallModalOpen(true)
+      return { triggered: false, reason: 'no-prompt' }
     }
   }
 
@@ -97,6 +132,8 @@ export function usePWA() {
     canInstall: !isInstalled,
     isInstalled,
     platform,
+    browserInfo,
+    hasNativePrompt: Boolean(installPrompt || globalInstallPrompt),
     isInstallModalOpen,
     setIsInstallModalOpen,
     isBannerDismissed,

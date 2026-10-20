@@ -51,13 +51,20 @@ FeedSchedule schedules[MAX_SCHEDULES];
 int totalSchedules = 0;
 
 // -------------------------------------------------------------
-// Variabel State & Timer
+// Variabel State, Timer & Ambang Pengaman (PRD Section 6.1 F-07 & F-09)
 // -------------------------------------------------------------
 unsigned long lastTelemetryMillis = 0;
 unsigned long lastMqttRetryMillis = 0;
 int lastFeedMinute = -1;
 float lastTemperature = 28.0;
 bool lastLevelOk = true;
+
+// Ambang Pengaman Lokal
+float thresholdTempMin = DEFAULT_TEMP_MIN;
+float thresholdTempMax = DEFAULT_TEMP_MAX;
+unsigned long minGapMinutes = DEFAULT_MIN_GAP_MIN;
+unsigned long lastFeedSuccessMillis = 0;
+bool hasFedBefore = false;
 
 // -------------------------------------------------------------
 // Prototipe Fungsi
@@ -201,10 +208,11 @@ void connectMQTT() {
     // Beritahukan sistem bahwa feeder sedang ONLINE
     mqttClient.publish(TOPIC_STATUS, "online", true);
 
-    // Berlangganan topik perintah pakan dan sinkronisasi jadwal
+    // Berlangganan topik perintah pakan, sinkronisasi jadwal, dan ambang batas
     mqttClient.subscribe(TOPIC_COMMAND, 1);
     mqttClient.subscribe(TOPIC_SCHEDULES, 1);
-    Serial.printf("[MQTT] Berlangganan: %s & %s\n", TOPIC_COMMAND, TOPIC_SCHEDULES);
+    mqttClient.subscribe(TOPIC_THRESHOLDS, 1);
+    Serial.printf("[MQTT] Berlangganan: %s, %s, %s\n", TOPIC_COMMAND, TOPIC_SCHEDULES, TOPIC_THRESHOLDS);
   } else {
     Serial.printf("GAGAL (rc=%d). Akan dicoba kembali dalam 5 detik.\n", mqttClient.state());
   }
@@ -230,7 +238,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       const char* action = doc["action"] | "";
       int durationMs = doc["duration_ms"] | DEFAULT_FEED_MS;
 
-      if (strcmp(action, "feed") == 0) {
+      if (strcmp(action, "feed") == 0 || durationMs > 0) {
         Serial.printf("[AKSI] Perintah pakan manual diterima: durasi %d ms\n", durationMs);
         executeFeeding(durationMs, "Manual (MQTT Remote)");
       }
@@ -242,6 +250,19 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     Serial.println(F("[JADWAL] Menerima pembaruan array jadwal pakan."));
     saveSchedulesToFS(message);
     loadSchedulesFromFS();
+  }
+
+  // C. Pembaruan Ambang Pengaman Sistem (PRD Section 11 & 13.1)
+  else if (strcmp(topic, TOPIC_THRESHOLDS) == 0) {
+    StaticJsonDocument<256> doc;
+    DeserializationError error = deserializeJson(doc, message);
+    if (!error) {
+      if (doc.containsKey("temp_min")) thresholdTempMin = doc["temp_min"];
+      if (doc.containsKey("temp_max")) thresholdTempMax = doc["temp_max"];
+      if (doc.containsKey("min_gap_min")) minGapMinutes = doc["min_gap_min"];
+      Serial.printf("[AMBANG] Diperbarui: Suhu %.1f - %.1f C | Jeda: %lu menit\n",
+                    thresholdTempMin, thresholdTempMax, minGapMinutes);
+    }
   }
 }
 
@@ -257,25 +278,57 @@ bool isWaterLevelSafe() {
 }
 
 // -------------------------------------------------------------
-// Eksekusi Pakan Motor Servo Pelet
+// Eksekusi Pakan Motor Servo Pelet dengan Aturan Keselamatan Lokal (PRD F-07 & F-09)
 // -------------------------------------------------------------
 void executeFeeding(int durationMs, const char* source) {
   // Batasi durasi pakan dalam batas toleransi aman
   durationMs = constrain(durationMs, MIN_FEED_DURATION_MS, MAX_FEED_DURATION_MS);
 
-  // PROTEKSI KESELAMATAN 1: Cek Pelampung Air
+  // 1. PROTEKSI LEVEL AIR (Float Switch)
   if (!isWaterLevelSafe()) {
     Serial.println(F("[SAFETY INTERLOCK] BAHAYA: Level air kolam rendah! Aksi pakan DIBATALKAN."));
     
-    // Kirim notifikasi kegagalan ke dashboard
-    StaticJsonDocument<256> logDoc;
-    logDoc["result"] = "skipped";
-    logDoc["source"] = source;
-    logDoc["reason"] = "Level air di bawah batas aman (Float Switch)";
-    char buffer[256];
-    serializeJson(logDoc, buffer);
+    StaticJsonDocument<128> skipDoc;
+    skipDoc["reason"] = "low_level";
+    skipDoc["source"] = source;
+    char buffer[128];
+    serializeJson(skipDoc, buffer);
+    mqttClient.publish(TOPIC_EVENT_SKIP, buffer);
     mqttClient.publish(TOPIC_TELEMETRY, buffer);
     return;
+  }
+
+  // 2. PROTEKSI SUHU AIR EKSTREM (PRD Section 7 & F-07: 24 - 32 C)
+  if (lastTemperature < thresholdTempMin || lastTemperature > thresholdTempMax) {
+    Serial.printf("[SAFETY INTERLOCK] BAHAYA: Suhu air abnormal (%.1f C di luar rentang %.1f-%.1f C)! Pakan DITUNDA.\n",
+                  lastTemperature, thresholdTempMin, thresholdTempMax);
+    
+    StaticJsonDocument<128> skipDoc;
+    skipDoc["reason"] = "temperature_out_of_range";
+    skipDoc["source"] = source;
+    skipDoc["temp"] = lastTemperature;
+    char buffer[128];
+    serializeJson(skipDoc, buffer);
+    mqttClient.publish(TOPIC_EVENT_SKIP, buffer);
+    mqttClient.publish(TOPIC_TELEMETRY, buffer);
+    return;
+  }
+
+  // 3. PROTEKSI JEDA MINIMAL COOLDOWN (PRD Section 7 & F-09: 30 menit)
+  if (hasFedBefore && strstr(source, "Manual") == NULL) {
+    unsigned long elapsedMs = millis() - lastFeedSuccessMillis;
+    unsigned long requiredGapMs = minGapMinutes * 60000UL;
+    if (elapsedMs < requiredGapMs) {
+      Serial.printf("[SAFETY INTERLOCK] Jeda %lu menit belum terpenuhi! Pakan DITUNDA.\n", minGapMinutes);
+      
+      StaticJsonDocument<128> skipDoc;
+      skipDoc["reason"] = "cooldown_active";
+      skipDoc["source"] = source;
+      char buffer[128];
+      serializeJson(skipDoc, buffer);
+      mqttClient.publish(TOPIC_EVENT_SKIP, buffer);
+      return;
+    }
   }
 
   Serial.printf("[FEEDER] Mengaktifkan motor servo selama %d ms (Pemicu: %s)...\n", durationMs, source);
@@ -292,16 +345,21 @@ void executeFeeding(int durationMs, const char* source) {
   feederServo.detach();   // Lepas kontrol PWM agar hemat daya & dingin
 
   digitalWrite(PIN_LED_STATUS, HIGH); // Matikan LED
+  lastFeedSuccessMillis = millis();
+  hasFedBefore = true;
   Serial.println(F("[FEEDER] Pakan pelet selesai diberikan."));
 
-  // Publikasikan konfirmasi sukses ke MQTT
+  // Publikasikan konfirmasi sukses ke MQTT (PRD Section 11 event/feed)
+  time_t now = time(nullptr);
   StaticJsonDocument<256> logDoc;
+  logDoc["ts"] = (unsigned long)now;
   logDoc["result"] = "done";
   logDoc["source"] = source;
   logDoc["duration_ms"] = durationMs;
   logDoc["reason"] = "Selesai tepat waktu";
   char buffer[256];
   serializeJson(logDoc, buffer);
+  mqttClient.publish(TOPIC_EVENT_FEED, buffer);
   mqttClient.publish(TOPIC_TELEMETRY, buffer);
 }
 

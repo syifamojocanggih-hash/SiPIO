@@ -1,4 +1,4 @@
-# Panduan Firmware ESP32-CAM Node — SiPIO
+# Panduan Firmware ESP32-CAM Node - SiPIO
 
 Modul **ESP32-CAM** (AI-Thinker) bertugas mengambil foto berkala kondisi permukaan kolam ikan dan sisa pakan di wadah pelet (*hopper*), lalu mengunggahnya secara otomatis ke backend FastAPI SiPIO via HTTP POST Multipart.
 

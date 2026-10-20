@@ -13,48 +13,65 @@ except ImportError:
 # -------------------------------------------------------------
 # Database Connection Configuration (SQLite or MySQL)
 # -------------------------------------------------------------
-# Untuk SQLite (default, tanpa instalasi server tambahan):
 DEFAULT_SQLITE_URL = "sqlite:///./sipio.db"
+target_db_url = os.getenv("DATABASE_URL", DEFAULT_SQLITE_URL)
 
-# Untuk MySQL (misal menggunakan XAMPP / MariaDB / Laragon):
-# Cukup set variabel lingkungan DATABASE_URL, contoh:
-# DATABASE_URL = "mysql+pymysql://root:@localhost:3306/sipio_db"
+def create_resilient_engine():
+    global DATABASE_URL
+    target = os.getenv("DATABASE_URL", DEFAULT_SQLITE_URL)
+    connect_args = {"check_same_thread": False} if target.startswith("sqlite") else {}
+    
+    eng = create_engine(target, connect_args=connect_args, pool_pre_ping=True)
+    if not target.startswith("sqlite"):
+        try:
+            with eng.connect() as conn:
+                pass
+            DATABASE_URL = target
+            return eng
+        except Exception as err:
+            print(f"[SiPIO Database] Server {target} tidak dapat diakses ({err}).")
+            print(f"[SiPIO Database] Beralih otomatis ke database lokal SQLite: {DEFAULT_SQLITE_URL}")
+            DATABASE_URL = DEFAULT_SQLITE_URL
+            return create_engine(DEFAULT_SQLITE_URL, connect_args={"check_same_thread": False}, pool_pre_ping=True)
+    
+    DATABASE_URL = target
+    return eng
 
-DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_SQLITE_URL)
-
-# Konfigurasi argumen koneksi (SQLite butuh check_same_thread=False)
-connect_args = {}
-if DATABASE_URL.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
-
-engine = create_engine(
-    DATABASE_URL,
-    connect_args=connect_args,
-    pool_pre_ping=True
-)
-
+engine = create_resilient_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 # -------------------------------------------------------------
-# Database Models (Tabel-tabel SiPIO)
+# Database Models (Tabel-tabel SiPIO Sesuai PRD Section 13)
 # -------------------------------------------------------------
 
+class DeviceModel(Base):
+    """Menyimpan data identitas perangkat feeder/kamera (PRD Section 13.1)"""
+    __tablename__ = "devices"
+
+    id: Mapped[str] = mapped_column(String(50), primary_key=True, default="feeder01")
+    name: Mapped[str] = mapped_column(String(100), default="SiPIO Feeder Kolam 1")
+    device_type: Mapped[str] = mapped_column(String(50), default="esp8266_feeder")
+    is_online: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_seen: Mapped[int] = mapped_column(BigInteger, default=lambda: int(time.time() * 1000))
+
 class TelemetryLogModel(Base):
-    """Merekam riwayat pembacaan sensor DS18B20 & Float Switch"""
+    """Merekam riwayat pembacaan sensor DS18B20 & Float Switch (PRD Section 13)"""
     __tablename__ = "telemetry_logs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    device_id: Mapped[str] = mapped_column(String(50), default="feeder01")
     temp: Mapped[float] = mapped_column(Float, nullable=False)
     level_ok: Mapped[bool] = mapped_column(Boolean, default=True)
     rssi: Mapped[int] = mapped_column(Integer, default=-61)
     timestamp: Mapped[int] = mapped_column(BigInteger, default=lambda: int(time.time() * 1000))
 
 class FeedLogModel(Base):
-    """Merekam jejak audit eksekusi pakan (jadwal vs manual)"""
+    """Merekam jejak audit eksekusi pakan (jadwal vs manual) (PRD Section 13)"""
     __tablename__ = "feed_logs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    device_id: Mapped[str] = mapped_column(String(50), default="feeder01")
     timestamp_str: Mapped[str] = mapped_column(String(50), nullable=False)
     source: Mapped[str] = mapped_column(String(50), default="Manual")
     duration_ms: Mapped[int] = mapped_column(Integer, default=2000)
@@ -62,10 +79,11 @@ class FeedLogModel(Base):
     reason: Mapped[str] = mapped_column(String(255), default="")
 
 class ScheduleModel(Base):
-    """Menyimpan jadwal pemberian pakan ikan harian"""
+    """Menyimpan jadwal pemberian pakan ikan harian (PRD Section 13)"""
     __tablename__ = "schedules"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    device_id: Mapped[str] = mapped_column(String(50), default="feeder01")
     time: Mapped[str] = mapped_column(String(10), nullable=False) # e.g. "07:00"
     duration_ms: Mapped[int] = mapped_column(Integer, default=2000)
     days: Mapped[str] = mapped_column(String(50), default="Setiap Hari")
@@ -73,7 +91,7 @@ class ScheduleModel(Base):
     synced: Mapped[bool] = mapped_column(Boolean, default=True)
 
 class ThresholdModel(Base):
-    """Menyimpan ambang batas pengaman sistem"""
+    """Menyimpan ambang batas pengaman sistem (PRD Section 13 & 13.1)"""
     __tablename__ = "thresholds"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
@@ -83,6 +101,28 @@ class ThresholdModel(Base):
     default_duration_ms: Mapped[int] = mapped_column(Integer, default=2000)
     offline_after_s: Mapped[int] = mapped_column(Integer, default=60)
     camera_interval_s: Mapped[int] = mapped_column(Integer, default=300)
+
+class AlertModel(Base):
+    """Menyimpan riwayat alert keselamatan (PRD Section 13 & B-07)"""
+    __tablename__ = "alerts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    device_id: Mapped[str] = mapped_column(String(50), default="feeder01")
+    ts: Mapped[int] = mapped_column(BigInteger, default=lambda: int(time.time() * 1000))
+    alert_type: Mapped[str] = mapped_column(String(50)) # 'level_low' | 'temp_abnormal' | 'offline'
+    message: Mapped[str] = mapped_column(String(255))
+    acknowledged: Mapped[bool] = mapped_column(Boolean, default=False)
+
+class CameraSnapshotModel(Base):
+    """Menyimpan metadata foto snapshot kamera ESP32-CAM (PRD Section 13.1 & B-10)"""
+    __tablename__ = "camera_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    device_id: Mapped[str] = mapped_column(String(50), default="feeder01")
+    ts: Mapped[str] = mapped_column(String(50)) # e.g. "2026-10-20 20:00:00"
+    area: Mapped[str] = mapped_column(String(20)) # 'kolam' | 'hopper'
+    image_path: Mapped[str] = mapped_column(String(255))
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
 
 # -------------------------------------------------------------
 # Dependency Injection Session
@@ -101,8 +141,38 @@ def get_db() -> Generator[Session, None, None]:
 def init_db():
     """Membuat tabel jika belum ada dan mengisi data awal default"""
     Base.metadata.create_all(bind=engine)
+
+    # Migrasi otomatis kolom device_id untuk SQLite jika tabel lama sudah ada
+    if str(engine.url).startswith("sqlite"):
+        import sqlite3
+        raw_db_path = str(engine.url).split("sqlite:///")[-1]
+        if os.path.exists(raw_db_path):
+            try:
+                with sqlite3.connect(raw_db_path) as conn:
+                    cursor = conn.cursor()
+                    for tbl in ["schedules", "feed_logs", "telemetry_logs"]:
+                        try:
+                            cursor.execute(f"ALTER TABLE {tbl} ADD COLUMN device_id TEXT DEFAULT 'feeder01'")
+                        except Exception:
+                            pass
+                    conn.commit()
+            except Exception:
+                pass
+
     db = SessionLocal()
     try:
+        # 0. Seed Device jika belum ada (PRD Section 13.1)
+        device = db.query(DeviceModel).filter_by(id="feeder01").first()
+        if not device:
+            default_device = DeviceModel(
+                id="feeder01",
+                name="SiPIO Feeder Kolam 1",
+                device_type="esp8266_feeder",
+                is_online=True
+            )
+            db.add(default_device)
+            db.commit()
+
         # 1. Seed Thresholds jika masih kosong
         threshold = db.query(ThresholdModel).filter_by(id=1).first()
         if not threshold:

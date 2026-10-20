@@ -164,7 +164,7 @@ export function FeedActionCard({
                 {isWaterLow ? (
                   <>
                     <AlertCircle size={18} />
-                    <span className="btn-feed-text">Level Air Rendah — Feeder Terkunci</span>
+                    <span className="btn-feed-text">Level Air Rendah: Feeder Terkunci</span>
                   </>
                 ) : (
                   <>

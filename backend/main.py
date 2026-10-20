@@ -19,7 +19,8 @@ from sqlalchemy.orm import Session
 
 from database import (
     init_db, get_db, SessionLocal,
-    TelemetryLogModel, FeedLogModel, ScheduleModel, ThresholdModel
+    DeviceModel, TelemetryLogModel, FeedLogModel, ScheduleModel, ThresholdModel,
+    AlertModel, CameraSnapshotModel
 )
 
 # Setup direktori penyimpanan foto ESP32-CAM
@@ -43,12 +44,22 @@ MQTT_BROKER_PORT = int(os.getenv("MQTT_BROKER_PORT", 1883))
 MQTT_USERNAME = os.getenv("MQTT_USERNAME", "")
 MQTT_PASSWORD = os.getenv("MQTT_PASSWORD", "")
 
-# MQTT Topics
-TOPIC_TELEMETRY = "sipio/feeder/telemetry"
-TOPIC_FEEDER_STATUS = "sipio/feeder/status"
-TOPIC_CAM_STATUS = "sipio/camera/status"
-TOPIC_FEED_CMD = "sipio/feeder/command"
-TOPIC_SCHEDULES = "sipio/feeder/schedules"
+# MQTT Topics (PRD Section 11 & Backward-Compatible Aliases)
+TOPIC_TELEMETRY = "fish/feeder01/telemetry"
+TOPIC_FEEDER_STATUS = "fish/feeder01/status"
+TOPIC_CAM_STATUS = "fish/feeder01/cam/status"
+TOPIC_FEED_CMD = "fish/feeder01/cmd/feed"
+TOPIC_EVENT_FEED = "fish/feeder01/event/feed"
+TOPIC_EVENT_SKIP = "fish/feeder01/event/skip"
+TOPIC_SCHEDULES = "fish/feeder01/cfg/schedule"
+TOPIC_THRESHOLDS = "fish/feeder01/cfg/thresholds"
+
+# Legacy aliases
+LEGACY_TOPIC_TELEMETRY = "sipio/feeder/telemetry"
+LEGACY_TOPIC_FEEDER_STATUS = "sipio/feeder/status"
+LEGACY_TOPIC_CAM_STATUS = "sipio/camera/status"
+LEGACY_TOPIC_FEED_CMD = "sipio/feeder/command"
+LEGACY_TOPIC_SCHEDULES = "sipio/feeder/schedules"
 
 # -------------------------------------------------------------
 # Data Models (Pydantic v2)
@@ -163,7 +174,12 @@ def on_mqtt_connect(client, userdata, flags, rc, properties=None):
         client.subscribe([
             (TOPIC_TELEMETRY, 0),
             (TOPIC_FEEDER_STATUS, 0),
-            (TOPIC_CAM_STATUS, 0)
+            (TOPIC_CAM_STATUS, 0),
+            (TOPIC_EVENT_FEED, 0),
+            (TOPIC_EVENT_SKIP, 0),
+            (LEGACY_TOPIC_TELEMETRY, 0),
+            (LEGACY_TOPIC_FEEDER_STATUS, 0),
+            (LEGACY_TOPIC_CAM_STATUS, 0)
         ])
     else:
         mqtt_connected = False
@@ -179,7 +195,7 @@ def on_mqtt_message(client, userdata, msg):
         topic = msg.topic
         payload_str = msg.payload.decode('utf-8')
         
-        if topic == TOPIC_TELEMETRY:
+        if topic in [TOPIC_TELEMETRY, LEGACY_TOPIC_TELEMETRY]:
             payload = json.loads(payload_str)
             current_telemetry.temp = float(payload.get("temp", current_telemetry.temp))
             current_telemetry.level_ok = bool(payload.get("level_ok", current_telemetry.level_ok))
@@ -190,6 +206,7 @@ def on_mqtt_message(client, userdata, msg):
             try:
                 with SessionLocal() as db_session:
                     db_session.add(TelemetryLogModel(
+                        device_id="feeder01",
                         temp=current_telemetry.temp,
                         level_ok=current_telemetry.level_ok,
                         rssi=current_telemetry.rssi,
@@ -199,10 +216,70 @@ def on_mqtt_message(client, userdata, msg):
             except Exception as db_err:
                 logger.warning(f"Gagal mencatat telemetri MQTT ke database: {db_err}")
 
-        elif topic == TOPIC_FEEDER_STATUS:
+        elif topic in [TOPIC_FEEDER_STATUS, LEGACY_TOPIC_FEEDER_STATUS]:
             current_telemetry.esp_online = (payload_str.lower() == "online")
-        elif topic == TOPIC_CAM_STATUS:
+            try:
+                with SessionLocal() as db_session:
+                    dev = db_session.query(DeviceModel).filter_by(id="feeder01").first()
+                    if dev:
+                        dev.is_online = current_telemetry.esp_online
+                        dev.last_seen = int(time.time() * 1000)
+                        db_session.commit()
+            except Exception:
+                pass
+
+        elif topic in [TOPIC_CAM_STATUS, LEGACY_TOPIC_CAM_STATUS]:
             current_telemetry.cam_online = (payload_str.lower() == "online")
+
+        elif topic == TOPIC_EVENT_FEED:
+            try:
+                payload = json.loads(payload_str)
+                with SessionLocal() as db_session:
+                    new_feed = FeedLogModel(
+                        device_id="feeder01",
+                        timestamp_str=time.strftime("%d %b %Y %H:%M:%S"),
+                        source=payload.get("source", "schedule"),
+                        duration_ms=int(payload.get("duration_ms", 2000)),
+                        result="done",
+                        reason="Berhasil: Diberikan oleh ESP8266 sesuai jadwal"
+                    )
+                    db_session.add(new_feed)
+                    db_session.commit()
+            except Exception as err:
+                logger.warning(f"Gagal mencatat event/feed: {err}")
+
+        elif topic == TOPIC_EVENT_SKIP:
+            try:
+                payload = json.loads(payload_str)
+                reason_code = payload.get("reason", "unknown")
+                reason_map = {
+                    "low_level": "Level air di bawah batas aman (Float Switch)",
+                    "temperature_out_of_range": "Suhu air kolam di luar batas aman layak makan",
+                    "cooldown_active": "Jeda waktu minimal antar pakan belum terpenuhi"
+                }
+                reason_text = reason_map.get(reason_code, f"Pakan ditunda: {reason_code}")
+                with SessionLocal() as db_session:
+                    new_skip = FeedLogModel(
+                        device_id="feeder01",
+                        timestamp_str=time.strftime("%d %b %Y %H:%M:%S"),
+                        source="Jadwal Otomatis (ESP)",
+                        duration_ms=2000,
+                        result="skipped",
+                        reason=reason_text
+                    )
+                    db_session.add(new_skip)
+                    
+                    new_alert = AlertModel(
+                        device_id="feeder01",
+                        ts=int(time.time() * 1000),
+                        alert_type="interlock_" + reason_code,
+                        message=reason_text,
+                        acknowledged=False
+                    )
+                    db_session.add(new_alert)
+                    db_session.commit()
+            except Exception as err:
+                logger.warning(f"Gagal mencatat event/skip: {err}")
     except Exception as e:
         logger.error(f"Error memproses pesan MQTT ({msg.topic}): {e}")
 
@@ -353,8 +430,51 @@ def get_health():
         }
     }
 
-@app.get("/api/telemetry", response_model=TelemetryData)
-def get_telemetry():
+@app.get("/api/status")
+def get_device_status(db: Session = Depends(get_db)):
+    """Mengembalikan status terkini perangkat (PRD Section 12)"""
+    dev = db.query(DeviceModel).filter_by(id="feeder01").first()
+    return {
+        "status": "online" if current_telemetry.esp_online else "offline",
+        "device_id": "feeder01",
+        "name": dev.name if dev else "SiPIO Feeder Kolam 1",
+        "esp_online": current_telemetry.esp_online,
+        "cam_online": current_telemetry.cam_online,
+        "rssi": current_telemetry.rssi,
+        "temp": current_telemetry.temp,
+        "level_ok": current_telemetry.level_ok,
+        "uptime_seconds": int(time.time() - start_time),
+        "mqtt_connected": mqtt_connected,
+        "timestamp": current_telemetry.timestamp
+    }
+
+@app.get("/api/telemetry")
+def get_telemetry(
+    from_ts: Optional[int] = Query(None, alias="from", description="Timestamp awal (ms)"),
+    to_ts: Optional[int] = Query(None, alias="to", description="Timestamp akhir (ms)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Jika query parameter 'from' atau 'to' disertakan, mengembalikan riwayat telemetri (PRD Section 12).
+    Jika tanpa parameter, mengembalikan data telemetri terkini.
+    """
+    if from_ts is not None or to_ts is not None:
+        q = db.query(TelemetryLogModel)
+        if from_ts is not None:
+            q = q.filter(TelemetryLogModel.timestamp >= from_ts)
+        if to_ts is not None:
+            q = q.filter(TelemetryLogModel.timestamp <= to_ts)
+        logs = q.order_by(TelemetryLogModel.timestamp.desc()).limit(200).all()
+        return [
+            {
+                "id": l.id,
+                "temp": l.temp,
+                "level_ok": l.level_ok,
+                "rssi": l.rssi,
+                "timestamp": l.timestamp
+            }
+            for l in logs
+        ]
     return current_telemetry
 
 @app.get("/api/telemetry/history")
@@ -576,14 +696,29 @@ def reset_feed_cooldown():
 # -------------------------------------------------------------
 # ESP32-CAM Snapshot Endpoints
 # -------------------------------------------------------------
+def cleanup_old_snapshots():
+    """Pembersihan otomatis snapshot lama (> 7 hari) agar disk tidak penuh (PRD B-12)"""
+    try:
+        seven_days_ago_s = time.time() - (7 * 86400)
+        for folder in [FRONTEND_CAMERA_DIR, BACKEND_STATIC_CAMERA_DIR]:
+            if folder.exists():
+                for p in folder.glob("*.jpg"):
+                    if p.name not in ["pond_latest.jpg", "hopper_latest.jpg"]:
+                        if p.stat().st_mtime < seven_days_ago_s:
+                            p.unlink(missing_ok=True)
+                            logger.info(f"Snapshot lama dihapus: {p.name}")
+    except Exception as e:
+        logger.warning(f"Gagal membersihkan snapshot lama: {e}")
+
 @app.post("/api/camera/upload")
 async def upload_camera_image(
     file: UploadFile = File(..., description="File foto JPEG dari ESP32-CAM"),
-    area: str = Form("kolam", description="Area pemantauan: 'kolam' (permukaan kolam) atau 'hopper' (wadah pakan)")
+    area: str = Form("kolam", description="Area pemantauan: 'kolam' (permukaan kolam) atau 'hopper' (wadah pakan)"),
+    db: Session = Depends(get_db)
 ):
     """
     Menerima unggahan foto snapshot dari ESP32-CAM secara periodik atau on-demand.
-    Menyimpan foto terbaru dan menyiarkan notifikasi pembaruan ke seluruh client WebSocket.
+    Menyimpan foto terbaru, mencatat ke tabel camera_snapshots (PRD B-10 & 13.1), dan broadcast WebSocket.
     """
     allowed_exts = (".jpg", ".jpeg", ".png")
     is_valid_type = (file.content_type in ["image/jpeg", "image/jpg", "image/png"]) or any(
@@ -617,6 +752,23 @@ async def upload_camera_image(
             f.write(contents)
     except Exception as e:
         logger.warning(f"Gagal menyalin foto ke arsip backend: {e}")
+
+    # Catat ke tabel camera_snapshots (PRD Section 13.1 & B-10)
+    try:
+        snap = CameraSnapshotModel(
+            device_id="feeder01",
+            ts=time.strftime("%Y-%m-%d %H:%M:%S"),
+            area=area_clean,
+            image_path=f"/camera/{target_filename}",
+            size_bytes=len(contents)
+        )
+        db.add(snap)
+        db.commit()
+    except Exception as db_err:
+        logger.warning(f"Gagal mencatat snapshot ke DB: {db_err}")
+
+    # Jalankan pembersihan berkala (PRD B-12)
+    cleanup_old_snapshots()
 
     # Set status modul kamera online
     current_telemetry.cam_online = True
@@ -652,17 +804,17 @@ async def upload_camera_image(
     }
 
 @app.get("/api/camera/latest")
-def get_latest_camera_status():
-    """Mengembalikan status foto terbaru dari kedua area pemantauan"""
+def get_latest_camera_status(area: Optional[str] = Query(None, description="Filter area: 'kolam' atau 'hopper'")):
+    """Mengembalikan status foto terbaru dari kedua area pemantauan atau area tertentu (PRD B-11)"""
     kolam_path = FRONTEND_CAMERA_DIR / "pond_latest.jpg"
     hopper_path = FRONTEND_CAMERA_DIR / "hopper_latest.jpg"
 
-    def get_info(path, area, default_title):
+    def get_info(path, area_name, default_title):
         if path.exists():
             mtime = os.path.getmtime(path)
             return {
                 "exists": True,
-                "area": area,
+                "area": area_name,
                 "title": default_title,
                 "url": f"/camera/{path.name}?t={int(mtime*1000)}",
                 "size_bytes": os.path.getsize(path),
@@ -670,11 +822,21 @@ def get_latest_camera_status():
             }
         return {
             "exists": False,
-            "area": area,
+            "area": area_name,
             "title": default_title,
             "url": f"/camera/{path.name}",
             "size_bytes": 0,
             "updated_at": "Belum ada foto"
+        }
+
+    if area:
+        area_clean = "hopper" if "hopper" in area.lower() else "kolam"
+        target_path = hopper_path if area_clean == "hopper" else kolam_path
+        title = "Wadah Pakan Pelet (Hopper)" if area_clean == "hopper" else "Area Permukaan Kolam Ikan"
+        return {
+            "cam_online": current_telemetry.cam_online,
+            "area": area_clean,
+            "snapshot": get_info(target_path, area_clean, title)
         }
 
     return {
@@ -823,8 +985,10 @@ async def update_thresholds(cfg: ThresholdsConfig, db: Session = Depends(get_db)
     })
     return {"success": True, "thresholds": cfg}
 
+@app.get("/api/feed/logs")
 @app.get("/api/logs")
 def get_logs(db: Session = Depends(get_db)):
+    """Mengembalikan riwayat log pemberian pakan (PRD Section 12)"""
     logs = db.query(FeedLogModel).order_by(FeedLogModel.id.desc()).limit(50).all()
     return [
         {
@@ -839,8 +1003,38 @@ def get_logs(db: Session = Depends(get_db)):
     ]
 
 # -------------------------------------------------------------
-# WebSocket Real-Time Endpoint
+# Alerts API Endpoints (PRD Section 13 & B-07)
 # -------------------------------------------------------------
+@app.get("/api/alerts")
+def get_alerts(db: Session = Depends(get_db)):
+    """Mengembalikan riwayat peringatan keselamatan kolam (PRD B-07)"""
+    alerts = db.query(AlertModel).order_by(AlertModel.id.desc()).limit(30).all()
+    return [
+        {
+            "id": a.id,
+            "device_id": a.device_id,
+            "ts": a.ts,
+            "type": a.alert_type,
+            "message": a.message,
+            "acknowledged": a.acknowledged
+        }
+        for a in alerts
+    ]
+
+@app.put("/api/alerts/{alert_id}/ack")
+def acknowledge_alert(alert_id: int, db: Session = Depends(get_db)):
+    """Menandai alert telah dilihat (acknowledged)"""
+    alt = db.query(AlertModel).filter_by(id=alert_id).first()
+    if not alt:
+        raise HTTPException(status_code=404, detail="Alert tidak ditemukan")
+    alt.acknowledged = True
+    db.commit()
+    return {"success": True, "message": f"Alert #{alert_id} berhasil diakui"}
+
+# -------------------------------------------------------------
+# WebSocket Real-Time Endpoint (PRD Section 12: WS /ws)
+# -------------------------------------------------------------
+@app.websocket("/ws")
 @app.websocket("/ws/telemetry")
 async def websocket_telemetry_endpoint(websocket: WebSocket):
     await ws_manager.connect(websocket)

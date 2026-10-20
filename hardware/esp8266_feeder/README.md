@@ -1,4 +1,4 @@
-# Panduan Firmware ESP8266 Feeder Node — SiPIO
+# Panduan Firmware ESP8266 Feeder Node - SiPIO
 
 Modul mikrokontroler **ESP8266** bertindak sebagai *field controller* kolam yang bertugas mengukur suhu air, memantau pelampung pengaman, memutar motor servo pakan pelet, serta mengeksekusi jadwal pakan lokal secara mandiri meskipun jaringan internet terputus.
 
@@ -24,7 +24,7 @@ Modul mikrokontroler **ESP8266** bertindak sebagai *field controller* kolam yang
 | | DATA (Kuning/Putih) | `D2` (`GPIO4`) | Pasang resistor 4.7kΩ antara `D2` dan `3V3` |
 | **Float Switch** | Kabel 1 | `D5` (`GPIO14`) | Menggunakan internal `INPUT_PULLUP` |
 | | Kabel 2 | `GND` | Saat air cukup, switch terhubung ke GND |
-| **Motor Servo** | Signal (Oranye/Kuning)| `D6` (`GPIO12`) | Sinyal kontrol PWM putaran servo |
+| **Motor Servo** | Signal (Oranye/Kuning)| `D1` (`GPIO5`) | Sinyal kontrol PWM (PRD Tabel 10.2; alternatif: `D6`/`GPIO12`) |
 | | VCC (Merah) | `VIN` / `5V Eksternal`| **Jangan** pakai 3.3V (kurang daya) |
 | | GND (Cokelat/Hitam) | `GND` | Wajib sambung ground bersama |
 | **LED Status** | Internal On-Board | `D4` (`GPIO2`) | Berkedip saat pakan & pengiriman data |

@@ -139,5 +139,21 @@ export const api = {
     }
 
     return await res.json()
+  },
+
+  // 9. Device Status (PRD Section 12: GET /api/status)
+  async getDeviceStatus() {
+    return fetchJson('/status')
+  },
+
+  // 10. Safety Alerts & Interlocks (PRD Section 13: alert table)
+  async getAlerts() {
+    return fetchJson('/alerts')
+  },
+
+  async acknowledgeAlert(alertId) {
+    return fetchJson(`/alerts/${alertId}/ack`, {
+      method: 'PUT'
+    })
   }
 }

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Download, X, Smartphone, Zap, WifiOff } from 'lucide-react'
+import { Download, X, Zap, WifiOff } from 'lucide-react'
 
 export function MobileInstallBanner({ pwaState }) {
   const {
@@ -52,7 +52,7 @@ export function MobileInstallBanner({ pwaState }) {
           </p>
           {!isOnline && (
             <span className="install-banner-offline-alert">
-              <WifiOff size={11} /> Internet terputus — Fitur offline aktif
+              <WifiOff size={11} /> Internet terputus (fitur offline aktif)
             </span>
           )}
         </div>
