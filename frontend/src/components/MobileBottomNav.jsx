@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { LayoutDashboard, PlayCircle, Camera, TrendingUp, Settings } from 'lucide-react'
 
-export function MobileBottomNav({ onOpenSettings, triggerHaptic }) {
-  const [activeTab, setActiveTab] = useState('overview')
+export function MobileBottomNav({ 
+  activeTab: externalActiveTab, 
+  onTabChange, 
+  onOpenSettings, 
+  triggerHaptic 
+}) {
+  const [internalActiveTab, setInternalActiveTab] = useState('overview')
+  const activeTab = externalActiveTab || internalActiveTab
 
   const navItems = [
     { id: 'overview', label: 'Ringkasan', icon: LayoutDashboard, targetId: 'sec-overview' },
@@ -13,8 +19,9 @@ export function MobileBottomNav({ onOpenSettings, triggerHaptic }) {
   ]
 
   const handleTabClick = (item) => {
-    triggerHaptic(30)
-    setActiveTab(item.id)
+    if (triggerHaptic) triggerHaptic(30)
+    setInternalActiveTab(item.id)
+    if (onTabChange) onTabChange(item.id)
 
     if (item.action) {
       item.action()

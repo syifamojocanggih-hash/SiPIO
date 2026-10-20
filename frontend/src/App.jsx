@@ -8,6 +8,7 @@ import { TempChart } from './components/TempChart'
 import { ScheduleManager } from './components/ScheduleManager'
 import { FeedLogs } from './components/FeedLogs'
 import { SettingsModal } from './components/SettingsModal'
+import { DesktopSidebar } from './components/DesktopSidebar'
 import { MobileBottomNav } from './components/MobileBottomNav'
 import { PWAInstallModal } from './components/PWAInstallModal'
 import { MobileInstallBanner } from './components/MobileInstallBanner'
@@ -52,11 +53,26 @@ export function parseFeedLogTimestamp(timestampStr) {
   return isNaN(d.getTime()) ? null : d
 }
 
+export function sortSchedulesByTime(scheds) {
+  if (!Array.isArray(scheds)) return []
+  return [...scheds].sort((a, b) => {
+    const toMinutes = (timeStr) => {
+      if (!timeStr) return 0
+      const [h, m] = String(timeStr).split(':').map(Number)
+      return (h || 0) * 60 + (m || 0)
+    }
+    return toMinutes(a.time) - toMinutes(b.time)
+  })
+}
+
 export default function App() {
   // Theme state: 'light' by default for optimal outdoor sunlight readability (SiPIO White & Blue)
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('sipio-theme') || 'light'
   })
+
+  // Navigation tab state (synced across desktop sidebar & mobile bottom bar)
+  const [activeTab, setActiveTab] = useState('overview')
 
   // PWA hook
   const pwaState = usePWA()
@@ -77,13 +93,14 @@ export default function App() {
   // System Thresholds (PRD Section 13.1)
   const [thresholds, setThresholds] = useState(INITIAL_THRESHOLDS)
 
-  // Schedules (PRD Section 13 & D-04) with localStorage caching
+  // Schedules (PRD Section 13 & D-04) with localStorage caching, sorted chronologically
   const [schedules, setSchedules] = useState(() => {
     try {
       const saved = localStorage.getItem('sipio_schedules')
-      return saved ? JSON.parse(saved) : INITIAL_SCHEDULES
+      const parsed = saved ? JSON.parse(saved) : INITIAL_SCHEDULES
+      return sortSchedulesByTime(parsed)
     } catch {
-      return INITIAL_SCHEDULES
+      return sortSchedulesByTime(INITIAL_SCHEDULES)
     }
   })
 
@@ -170,9 +187,10 @@ export default function App() {
 
   const handleSchedulesUpdate = useCallback((newSchedules) => {
     if (Array.isArray(newSchedules)) {
-      setSchedules(newSchedules)
+      const sorted = sortSchedulesByTime(newSchedules)
+      setSchedules(sorted)
       try {
-        localStorage.setItem('sipio_schedules', JSON.stringify(newSchedules))
+        localStorage.setItem('sipio_schedules', JSON.stringify(sorted))
       } catch {}
     }
   }, [])
@@ -214,7 +232,7 @@ export default function App() {
       }
       setSchedules((prev) => {
         if (prev.some((s) => s.id === created.id)) return prev
-        const updated = [...prev, created]
+        const updated = sortSchedulesByTime([...prev, created])
         try { localStorage.setItem('sipio_schedules', JSON.stringify(updated)) } catch {}
         return updated
       })
@@ -228,7 +246,7 @@ export default function App() {
         synced: false
       }
       setSchedules((prev) => {
-        const updated = [...prev, localItem]
+        const updated = sortSchedulesByTime([...prev, localItem])
         try { localStorage.setItem('sipio_schedules', JSON.stringify(updated)) } catch {}
         return updated
       })
@@ -239,7 +257,7 @@ export default function App() {
 
   const handleEditSchedule = useCallback(async (id, scheduleData) => {
     setSchedules((prev) => {
-      const updated = prev.map((s) => (s.id === id ? { ...s, ...scheduleData } : s))
+      const updated = sortSchedulesByTime(prev.map((s) => (s.id === id ? { ...s, ...scheduleData } : s)))
       try { localStorage.setItem('sipio_schedules', JSON.stringify(updated)) } catch {}
       return updated
     })
@@ -302,9 +320,10 @@ export default function App() {
     // 2. Ambil jadwal pakan aktif
     api.getSchedules().then((scheds) => {
       if (Array.isArray(scheds) && scheds.length > 0) {
-        setSchedules(scheds)
+        const sorted = sortSchedulesByTime(scheds)
+        setSchedules(sorted)
         try {
-          localStorage.setItem('sipio_schedules', JSON.stringify(scheds))
+          localStorage.setItem('sipio_schedules', JSON.stringify(sorted))
         } catch {}
       }
     }).catch(() => {})
@@ -541,86 +560,103 @@ export default function App() {
   }
 
   return (
-    <div className="app-container">
-      {/* 1. Header & Top Bar with Connectivity and PWA Installer */}
-      <Navbar
-        theme={theme}
-        toggleTheme={toggleTheme}
+    <div className="app-layout">
+      {/* Desktop Sidebar (visible on desktop >= 1024px) */}
+      <DesktopSidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        pwaState={pwaState}
         espStatus={espStatus}
         camStatus={camStatus}
         backendConnection={iotConnection}
-      />
-
-      {/* 1.2 Banner PWA Pemasangan ke Smartphone */}
-      <MobileInstallBanner pwaState={pwaState} />
-
-      {/* 1.5 Interactive Browser Simulation Bar for Testing IoT States */}
-      <SimulationBar
-        telemetry={telemetry}
-        setTelemetry={setTelemetry}
-        espStatus={espStatus}
-        setEspStatus={setEspStatus}
-        camStatus={camStatus}
-        setCamStatus={setCamStatus}
-        onTriggerFeed={handleTriggerFeed}
-        onResetData={handleResetData}
+        theme={theme}
+        toggleTheme={toggleTheme}
+        pwaState={pwaState}
         triggerHaptic={pwaState.triggerHaptic}
       />
 
-      {/* 2. Alert Banner (D-07) */}
-      <AlertBanner
-        alerts={activeAlerts}
-        onDismissAlert={handleDismissAlert}
-      />
+      {/* Main Content Area */}
+      <main className="app-main-content">
+        {/* 1. Header & Top Bar with Connectivity and PWA Installer */}
+        <Navbar
+          theme={theme}
+          toggleTheme={toggleTheme}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          pwaState={pwaState}
+          espStatus={espStatus}
+          camStatus={camStatus}
+          backendConnection={iotConnection}
+        />
 
-      {/* 3. Metrics Overview Cards (D-01) */}
-      <MetricsOverview
-        telemetry={telemetry}
-        thresholds={thresholds}
-        lastFeed={lastFeed}
-      />
+        {/* 1.2 Banner PWA Pemasangan ke Smartphone */}
+        <MobileInstallBanner pwaState={pwaState} />
 
-      {/* 4. Main Interactive Grid */}
-      <div className="dashboard-grid">
-        {/* Left Column: Feeder Action, Schedule Manager, & Feeding Logs */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Quick Feeder Action (D-03) */}
-          <FeedActionCard
-            telemetry={telemetry}
-            thresholds={thresholds}
-            lastFeed={lastFeed}
-            lastFeedTimestamp={lastFeedTimestamp}
-            onTriggerFeed={handleTriggerFeed}
-            onResetCooldown={handleResetCooldown}
-            triggerHaptic={pwaState.triggerHaptic}
-          />
+        {/* 1.5 Interactive Browser Simulation Bar for Testing IoT States */}
+        <SimulationBar
+          telemetry={telemetry}
+          setTelemetry={setTelemetry}
+          espStatus={espStatus}
+          setEspStatus={setEspStatus}
+          camStatus={camStatus}
+          setCamStatus={setCamStatus}
+          onTriggerFeed={handleTriggerFeed}
+          onResetData={handleResetData}
+          triggerHaptic={pwaState.triggerHaptic}
+        />
 
-          {/* Schedule Manager (D-04) */}
-          <ScheduleManager
-            schedules={schedules}
-            onAddSchedule={handleAddSchedule}
-            onEditSchedule={handleEditSchedule}
-            onToggleSchedule={handleToggleSchedule}
-            onDeleteSchedule={handleDeleteSchedule}
-            onUpdateSchedules={setSchedules}
-            triggerHaptic={pwaState.triggerHaptic}
-          />
+        {/* 2. Alert Banner (D-07) */}
+        <AlertBanner
+          alerts={activeAlerts}
+          onDismissAlert={handleDismissAlert}
+        />
 
-          {/* Feeding Audit Trail / Logs (D-05, D-09) */}
-          <FeedLogs logs={feedLogs} />
+        {/* 3. Metrics Overview Cards (D-01) */}
+        <MetricsOverview
+          telemetry={telemetry}
+          thresholds={thresholds}
+          lastFeed={lastFeed}
+        />
+
+        {/* 4. Main Interactive Grid */}
+        <div className="dashboard-grid">
+          {/* Left Column: Feeder Action, Schedule Manager, & Feeding Logs */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Quick Feeder Action (D-03) */}
+            <FeedActionCard
+              telemetry={telemetry}
+              thresholds={thresholds}
+              lastFeed={lastFeed}
+              lastFeedTimestamp={lastFeedTimestamp}
+              onTriggerFeed={handleTriggerFeed}
+              onResetCooldown={handleResetCooldown}
+              triggerHaptic={pwaState.triggerHaptic}
+            />
+
+            {/* Schedule Manager (D-04) */}
+            <ScheduleManager
+              schedules={schedules}
+              onAddSchedule={handleAddSchedule}
+              onEditSchedule={handleEditSchedule}
+              onToggleSchedule={handleToggleSchedule}
+              onDeleteSchedule={handleDeleteSchedule}
+              onUpdateSchedules={setSchedules}
+              triggerHaptic={pwaState.triggerHaptic}
+            />
+
+            {/* Feeding Audit Trail / Logs (D-05, D-09) */}
+            <FeedLogs logs={feedLogs} />
+          </div>
+
+          {/* Right Column: Camera Monitor (D-10) & Temperature Analytics (D-02) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Camera Monitor Panel (ESP32-CAM) */}
+            <CameraMonitor camStatus={camStatus} cameraUpdate={cameraUpdate} />
+
+            {/* Temperature Trend Analytics (DS18B20) */}
+            <TempChart historyData={tempHistory} thresholds={thresholds} />
+          </div>
         </div>
-
-        {/* Right Column: Camera Monitor (D-10) & Temperature Analytics (D-02) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Camera Monitor Panel (ESP32-CAM) */}
-          <CameraMonitor camStatus={camStatus} cameraUpdate={cameraUpdate} />
-
-          {/* Temperature Trend Analytics (DS18B20) */}
-          <TempChart historyData={tempHistory} thresholds={thresholds} />
-        </div>
-      </div>
+      </main>
 
       {/* 5. Settings Modal (D-06) */}
       {isSettingsOpen && (
@@ -642,6 +678,8 @@ export default function App() {
 
       {/* 7. Mobile App PWA Bottom Navigation Bar */}
       <MobileBottomNav
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
         onOpenSettings={() => setIsSettingsOpen(true)}
         triggerHaptic={pwaState.triggerHaptic}
       />

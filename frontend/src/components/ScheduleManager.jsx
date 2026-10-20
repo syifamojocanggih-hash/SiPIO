@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Plus, Trash2, Edit2, CheckCircle2, Clock, X } from 'lucide-react'
 
 export function ScheduleManager({ 
@@ -18,6 +18,19 @@ export function ScheduleManager({
   const [time, setTime] = useState('07:00')
   const [duration, setDuration] = useState(2000)
   const [days, setDays] = useState('Setiap Hari')
+
+  // Urutkan jadwal secara kronologis berdasarkan waktu (pagi ke malam, e.g. 07:00, 10:00, 16:30)
+  const sortedSchedules = useMemo(() => {
+    if (!Array.isArray(schedules)) return []
+    return [...schedules].sort((a, b) => {
+      const toMinutes = (timeStr) => {
+        if (!timeStr) return 0
+        const [h, m] = String(timeStr).split(':').map(Number)
+        return (h || 0) * 60 + (m || 0)
+      }
+      return toMinutes(a.time) - toMinutes(b.time)
+    })
+  }, [schedules])
 
   // Keyboard accessibility: Escape closes modal (R-32)
   useEffect(() => {
@@ -146,12 +159,12 @@ export function ScheduleManager({
       </div>
 
       <div className="schedule-list">
-        {schedules.length === 0 ? (
+        {sortedSchedules.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
             Belum ada jadwal pakan yang diatur. Klik "Tambah Jadwal" untuk membuat rutinitas baru.
           </div>
         ) : (
-          schedules.map((sch) => (
+          sortedSchedules.map((sch) => (
             <div key={sch.id} className="schedule-item">
               <div className="schedule-time-box">
                 <span className="schedule-time">{sch.time}</span>
