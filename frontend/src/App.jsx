@@ -1,18 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Navbar } from './components/Navbar'
-import { AlertBanner } from './components/AlertBanner'
-import { MetricsOverview } from './components/MetricsOverview'
-import { FeedActionCard } from './components/FeedActionCard'
-import { CameraMonitor } from './components/CameraMonitor'
-import { TempChart } from './components/TempChart'
-import { ScheduleManager } from './components/ScheduleManager'
-import { FeedLogs } from './components/FeedLogs'
-import { SettingsModal } from './components/SettingsModal'
 import { DesktopSidebar } from './components/DesktopSidebar'
 import { MobileBottomNav } from './components/MobileBottomNav'
 import { PWAInstallModal } from './components/PWAInstallModal'
 import { MobileInstallBanner } from './components/MobileInstallBanner'
 import { SimulationBar } from './components/SimulationBar'
+import { OverviewPage } from './pages/OverviewPage'
+import { FeederPage } from './pages/FeederPage'
+import { CameraPage } from './pages/CameraPage'
+import { TempPage } from './pages/TempPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { usePWA } from './hooks/usePWA'
 import { useIoTConnection } from './hooks/useIoTConnection'
 import { api } from './services/api'
@@ -526,7 +523,7 @@ export default function App() {
       <DesktopSidebar
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenSettings={() => setActiveTab('settings')}
         espStatus={espStatus}
         camStatus={camStatus}
         backendConnection={iotConnection}
@@ -542,7 +539,7 @@ export default function App() {
         <Navbar
           theme={theme}
           toggleTheme={toggleTheme}
-          onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenSettings={() => setActiveTab('settings')}
           pwaState={pwaState}
           espStatus={espStatus}
           camStatus={camStatus}
@@ -565,58 +562,73 @@ export default function App() {
           triggerHaptic={pwaState.triggerHaptic}
         />
 
-        {/* 2. Alert Banner (D-07) */}
-        <AlertBanner
-          alerts={activeAlerts}
-          onDismissAlert={handleDismissAlert}
-        />
+        {/* Distinct Page Views */}
+        {activeTab === 'overview' && (
+          <OverviewPage
+            telemetry={telemetry}
+            thresholds={thresholds}
+            lastFeed={lastFeed}
+            lastFeedTimestamp={lastFeedTimestamp}
+            activeAlerts={activeAlerts}
+            onDismissAlert={handleDismissAlert}
+            espStatus={espStatus}
+            camStatus={camStatus}
+            backendConnection={iotConnection}
+            onNavigate={setActiveTab}
+            onTriggerFeed={handleTriggerFeed}
+            triggerHaptic={pwaState.triggerHaptic}
+          />
+        )}
 
-        {/* 3. Metrics Overview Cards (D-01) */}
-        <MetricsOverview
-          telemetry={telemetry}
-          thresholds={thresholds}
-          lastFeed={lastFeed}
-        />
+        {activeTab === 'feeder' && (
+          <FeederPage
+            telemetry={telemetry}
+            thresholds={thresholds}
+            lastFeed={lastFeed}
+            lastFeedTimestamp={lastFeedTimestamp}
+            schedules={schedules}
+            feedLogs={feedLogs}
+            onTriggerFeed={handleTriggerFeed}
+            onResetCooldown={handleResetCooldown}
+            onAddSchedule={handleAddSchedule}
+            onEditSchedule={handleEditSchedule}
+            onToggleSchedule={handleToggleSchedule}
+            onDeleteSchedule={handleDeleteSchedule}
+            onUpdateSchedules={setSchedules}
+            triggerHaptic={pwaState.triggerHaptic}
+          />
+        )}
 
-        {/* 4. Main Interactive Grid */}
-        <div className="dashboard-grid">
-          {/* Left Column: Feeder Action, Schedule Manager, & Feeding Logs */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Quick Feeder Action (D-03) */}
-            <FeedActionCard
-              telemetry={telemetry}
-              thresholds={thresholds}
-              lastFeed={lastFeed}
-              lastFeedTimestamp={lastFeedTimestamp}
-              onTriggerFeed={handleTriggerFeed}
-              onResetCooldown={handleResetCooldown}
-              triggerHaptic={pwaState.triggerHaptic}
-            />
+        {activeTab === 'camera' && (
+          <CameraPage
+            camStatus={camStatus}
+            cameraUpdate={cameraUpdate}
+            triggerHaptic={pwaState.triggerHaptic}
+          />
+        )}
 
-            {/* Schedule Manager (D-04) */}
-            <ScheduleManager
-              schedules={schedules}
-              onAddSchedule={handleAddSchedule}
-              onEditSchedule={handleEditSchedule}
-              onToggleSchedule={handleToggleSchedule}
-              onDeleteSchedule={handleDeleteSchedule}
-              onUpdateSchedules={setSchedules}
-              triggerHaptic={pwaState.triggerHaptic}
-            />
+        {activeTab === 'temp' && (
+          <TempPage
+            telemetry={telemetry}
+            thresholds={thresholds}
+            tempHistory={tempHistory}
+          />
+        )}
 
-            {/* Feeding Audit Trail / Logs (D-05, D-09) */}
-            <FeedLogs logs={feedLogs} />
-          </div>
-
-          {/* Right Column: Camera Monitor (D-10) & Temperature Analytics (D-02) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* Camera Monitor Panel (ESP32-CAM) */}
-            <CameraMonitor camStatus={camStatus} cameraUpdate={cameraUpdate} />
-
-            {/* Temperature Trend Analytics (DS18B20) */}
-            <TempChart historyData={tempHistory} thresholds={thresholds} />
-          </div>
-        </div>
+        {activeTab === 'settings' && (
+          <SettingsPage
+            thresholds={thresholds}
+            onSaveThresholds={setThresholds}
+            theme={theme}
+            toggleTheme={toggleTheme}
+            espStatus={espStatus}
+            camStatus={camStatus}
+            backendConnection={iotConnection}
+            onResetCooldown={handleResetCooldown}
+            onResetData={handleResetData}
+            triggerHaptic={pwaState.triggerHaptic}
+          />
+        )}
       </main>
 
       {/* 5. Settings Modal (D-06) */}
@@ -641,7 +653,7 @@ export default function App() {
       <MobileBottomNav
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenSettings={() => setActiveTab('settings')}
         triggerHaptic={pwaState.triggerHaptic}
       />
     </div>
