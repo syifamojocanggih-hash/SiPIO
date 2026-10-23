@@ -10,7 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       devOptions: {
         enabled: true,
-        type: 'module'
+        type: 'module',
+        suppressWarnings: true
       },
       includeAssets: [
         'favicon.svg',

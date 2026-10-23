@@ -3,7 +3,6 @@ import { Navbar } from './components/Navbar'
 import { DesktopSidebar } from './components/DesktopSidebar'
 import { MobileBottomNav } from './components/MobileBottomNav'
 import { PWAInstallModal } from './components/PWAInstallModal'
-import { MobileInstallBanner } from './components/MobileInstallBanner'
 import { SimulationBar } from './components/SimulationBar'
 import { OverviewPage } from './pages/OverviewPage'
 import { FeederPage } from './pages/FeederPage'
@@ -545,9 +544,6 @@ export default function App() {
           camStatus={camStatus}
           backendConnection={iotConnection}
         />
-
-        {/* 1.2 Banner PWA Pemasangan ke Smartphone */}
-        <MobileInstallBanner pwaState={pwaState} />
 
         {/* 1.5 Interactive Browser Simulation Bar for Testing IoT States */}
         <SimulationBar
