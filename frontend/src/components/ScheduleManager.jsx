@@ -137,11 +137,11 @@ export function ScheduleManager({
 
   return (
     <article className="card">
-      <div className="card-header">
-        <div>
+      <div className="card-header schedule-card-header">
+        <div className="schedule-header-text">
           <h2 className="card-title">
             <Clock size={18} className="text-cyan" />
-            Pengelola Jadwal Pakan (D-04)
+            <span>Pengelola Jadwal Pakan (D-04)</span>
           </h2>
           <p className="card-subtitle">Jadwal disimpan mandiri di LittleFS ESP8266, tetap berjalan saat WiFi putus</p>
         </div>
@@ -149,9 +149,8 @@ export function ScheduleManager({
         <button 
           type="button" 
           id="btn-add-schedule"
-          className="btn-primary" 
+          className="btn-primary schedule-add-btn" 
           onClick={openAddModal}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
         >
           <Plus size={16} />
           <span>Tambah Jadwal</span>
@@ -165,19 +164,37 @@ export function ScheduleManager({
           </div>
         ) : (
           sortedSchedules.map((sch) => (
-            <div key={sch.id} className="schedule-item">
-              <div className="schedule-time-box">
-                <span className="schedule-time">{sch.time}</span>
-                <div className="schedule-meta">
-                  <span className="schedule-days">{sch.days || 'Setiap Hari'}</span>
-                  <span className="schedule-duration">
-                    Durasi: {sch.duration_ms} ms (~{(sch.duration_ms / 400).toFixed(0)}g)
-                  </span>
+            <div 
+              key={sch.id} 
+              className={`schedule-item ${!sch.enabled ? 'schedule-disabled' : ''}`}
+            >
+              {/* Baris utama: Jam, frekuensi hari, durasi pakan & sakelar switch */}
+              <div className="schedule-main">
+                <div className="schedule-time-box">
+                  <span className="schedule-time">{sch.time}</span>
+                  <div className="schedule-meta">
+                    <span className="schedule-days">{sch.days || 'Setiap Hari'}</span>
+                    <span className="schedule-duration">
+                      Durasi: <strong>{sch.duration_ms} ms</strong> <span className="schedule-dose">(~{(sch.duration_ms / 400).toFixed(0)}g)</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="schedule-toggle-wrapper">
+                  <label className="switch" title={sch.enabled ? 'Nonaktifkan Jadwal' : 'Aktifkan Jadwal'}>
+                    <input
+                      type="checkbox"
+                      checked={sch.enabled}
+                      onChange={() => handleToggle(sch)}
+                      aria-label={`Status aktif jadwal jam ${sch.time}`}
+                    />
+                    <span className="slider" />
+                  </label>
                 </div>
               </div>
 
-              <div className="schedule-actions">
-                {/* Sync badge */}
+              {/* Baris bawah: Tag status sinkronisasi & aksi ubah/hapus */}
+              <div className="schedule-footer">
                 <span 
                   className="status-tag success" 
                   title="Tersimpan di memori lokal ESP8266 LittleFS"
@@ -187,38 +204,29 @@ export function ScheduleManager({
                   <span>Tersinkron</span>
                 </span>
 
-                {/* Edit Button */}
-                <button
-                  type="button"
-                  className="icon-btn"
-                  style={{ width: '36px', height: '36px' }}
-                  onClick={() => openEditModal(sch)}
-                  aria-label={`Ubah jadwal jam ${sch.time}`}
-                >
-                  <Edit2 size={14} />
-                </button>
+                <div className="schedule-actions">
+                  {/* Edit Button */}
+                  <button
+                    type="button"
+                    className="icon-btn schedule-icon-btn"
+                    onClick={() => openEditModal(sch)}
+                    aria-label={`Ubah jadwal jam ${sch.time}`}
+                    title="Ubah jadwal"
+                  >
+                    <Edit2 size={14} />
+                  </button>
 
-                {/* Delete Button */}
-                <button
-                  type="button"
-                  className="icon-btn"
-                  style={{ width: '36px', height: '36px', color: 'var(--status-rose)' }}
-                  onClick={() => handleDelete(sch.id)}
-                  aria-label={`Hapus jadwal jam ${sch.time}`}
-                >
-                  <Trash2 size={14} />
-                </button>
-
-                {/* Toggle Enable/Disable */}
-                <label className="switch" title={sch.enabled ? 'Nonaktifkan Jadwal' : 'Aktifkan Jadwal'}>
-                  <input
-                    type="checkbox"
-                    checked={sch.enabled}
-                    onChange={() => handleToggle(sch)}
-                    aria-label={`Status aktif jadwal jam ${sch.time}`}
-                  />
-                  <span className="slider" />
-                </label>
+                  {/* Delete Button */}
+                  <button
+                    type="button"
+                    className="icon-btn schedule-icon-btn schedule-btn-delete"
+                    onClick={() => handleDelete(sch.id)}
+                    aria-label={`Hapus jadwal jam ${sch.time}`}
+                    title="Hapus jadwal"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             </div>
           ))
@@ -304,8 +312,9 @@ export function ScheduleManager({
                   type="submit" 
                   id="btn-save-schedule"
                   className="btn-primary"
+                  disabled={isSaving}
                 >
-                  Simpan & Sinkronkan
+                  {isSaving ? 'Menyimpan...' : 'Simpan & Sinkronkan'}
                 </button>
               </div>
             </form>

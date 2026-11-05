@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import {
   LayoutDashboard,
   PlayCircle,
@@ -9,6 +9,8 @@ import {
   WifiOff,
   Sun,
   Moon,
+  Contrast,
+  SlidersHorizontal,
   Download,
   CheckCircle,
   Activity
@@ -23,6 +25,8 @@ export function DesktopSidebar({
   backendConnection,
   theme,
   toggleTheme,
+  contrast = 'normal',
+  toggleContrast,
   pwaState,
   triggerHaptic
 }) {
@@ -49,14 +53,18 @@ export function DesktopSidebar({
     },
     {
       id: 'settings',
-      label: 'Setelan',
+      label: 'Konfigurasi',
       icon: Settings
     }
   ]
 
   const handleItemClick = (item) => {
     if (triggerHaptic) triggerHaptic(30)
-    if (onTabChange) onTabChange(item.id)
+    if (item.id === 'settings' && onOpenSettings) {
+      onOpenSettings()
+    } else if (onTabChange) {
+      onTabChange(item.id)
+    }
   }
 
   return (
@@ -149,19 +157,62 @@ export function DesktopSidebar({
         </div>
       </div>
 
-      {/* 4. Footer Tools (Theme & PWA) */}
+      {/* 4. Pengaturan Khusus Tampilan (Mode Gelap & Kontras) */}
       <div className="sidebar-footer">
-        {/* Theme Toggle */}
-        <button
-          type="button"
-          className="sidebar-tool-btn"
-          onClick={toggleTheme}
-          aria-label={theme === 'dark' ? 'Ganti ke tema terang' : 'Ganti ke tema gelap'}
-          title={theme === 'dark' ? 'Mode Siang' : 'Mode Malam'}
-        >
-          {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
-          <span>{theme === 'dark' ? 'Mode Siang' : 'Mode Malam'}</span>
-        </button>
+        <div className="sidebar-display-settings">
+          <div className="sidebar-settings-header">
+            <SlidersHorizontal size={13} className="text-cyan" />
+            <span>Pengaturan Tampilan</span>
+          </div>
+
+          <div className="sidebar-settings-list">
+            {/* Setting: Mode Gelap */}
+            <div className="sidebar-setting-row">
+              <div className="sidebar-setting-label">
+                {theme === 'dark' ? <Moon size={15} /> : <Sun size={15} />}
+                <span>Mode Gelap</span>
+              </div>
+              <label 
+                className="switch switch-sm" 
+                title={theme === 'dark' ? 'Nonaktifkan Mode Gelap' : 'Aktifkan Mode Gelap'}
+              >
+                <input
+                  type="checkbox"
+                  checked={theme === 'dark'}
+                  onChange={() => {
+                    if (triggerHaptic) triggerHaptic(30)
+                    toggleTheme()
+                  }}
+                  aria-label="Mode Gelap"
+                />
+                <span className="slider" />
+              </label>
+            </div>
+
+            {/* Setting: Kontras Tinggi */}
+            <div className="sidebar-setting-row">
+              <div className="sidebar-setting-label">
+                <Contrast size={15} />
+                <span>Kontras</span>
+              </div>
+              <label 
+                className="switch switch-sm" 
+                title={contrast === 'high' ? 'Kembalikan Kontras Normal' : 'Aktifkan Kontras Tinggi (Luar Ruangan)'}
+              >
+                <input
+                  type="checkbox"
+                  checked={contrast === 'high'}
+                  onChange={() => {
+                    if (triggerHaptic) triggerHaptic(30)
+                    if (toggleContrast) toggleContrast()
+                  }}
+                  aria-label="Kontras Tinggi"
+                />
+                <span className="slider" />
+              </label>
+            </div>
+          </div>
+        </div>
 
         {/* PWA Install / Status */}
         {pwaState?.isInstalled ? (

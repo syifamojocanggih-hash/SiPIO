@@ -7,6 +7,7 @@ import {
   RotateCcw,
   Sun,
   Moon,
+  Contrast,
   Wifi,
   CheckCircle2,
   Database
@@ -17,6 +18,8 @@ export function SettingsPage({
   onSaveThresholds,
   theme,
   toggleTheme,
+  contrast = 'normal',
+  toggleContrast,
   espStatus,
   camStatus,
   backendConnection,
@@ -51,7 +54,7 @@ export function SettingsPage({
             <div className="page-icon-badge settings">
               <Settings size={20} />
             </div>
-            <h1 className="page-title">Setelan & Konfigurasi Sistem</h1>
+            <h1 className="page-title">Konfigurasi Sistem SiPIO</h1>
             <span className="page-status-badge">
               <span className="pulse-indicator" />
               SiPIO v1.3
@@ -200,7 +203,7 @@ export function SettingsPage({
               <p className="theme-current-desc">
                 {theme === 'dark'
                   ? 'Hemat baterai pada layar AMOLED & nyaman di malam hari'
-                  : 'Kontras tinggi WCAG AAA untuk keterbacaan optimal di bawah terik matahari'}
+                  : 'Tampilan terang alami dengan kontras jelas untuk siang hari'}
               </p>
             </div>
 
@@ -214,6 +217,31 @@ export function SettingsPage({
             >
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
               <span>{theme === 'dark' ? 'Ganti ke Mode Siang' : 'Ganti ke Mode Malam'}</span>
+            </button>
+          </div>
+
+          <div className="theme-toggle-row" style={{ marginTop: '12px' }}>
+            <div className="theme-toggle-info">
+              <span className="theme-current-label">
+                Tingkat Kontras: <strong>{contrast === 'high' ? 'Kontras Tinggi (Outdoor Sunlight)' : 'Kontras Standar'}</strong>
+              </span>
+              <p className="theme-current-desc">
+                {contrast === 'high'
+                  ? 'Batas kartu dipertebal dan teks dipertegas untuk keterbacaan optimal di bawah terik matahari luar ruangan'
+                  : 'Rasio kontras standar yang seimbang untuk penggunaan harian'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="theme-switch-btn"
+              onClick={() => {
+                if (triggerHaptic) triggerHaptic(30)
+                if (toggleContrast) toggleContrast()
+              }}
+            >
+              <Contrast size={18} />
+              <span>{contrast === 'high' ? 'Kembalikan Kontras Standar' : 'Aktifkan Kontras Tinggi'}</span>
             </button>
           </div>
         </div>

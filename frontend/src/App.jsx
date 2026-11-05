@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Navbar } from './components/Navbar'
 import { DesktopSidebar } from './components/DesktopSidebar'
 import { MobileBottomNav } from './components/MobileBottomNav'
 import { PWAInstallModal } from './components/PWAInstallModal'
-import { SimulationBar } from './components/SimulationBar'
 import { OverviewPage } from './pages/OverviewPage'
 import { FeederPage } from './pages/FeederPage'
 import { CameraPage } from './pages/CameraPage'
@@ -26,6 +24,11 @@ export default function App() {
   // Theme state: 'light' by default for optimal outdoor sunlight readability (SiPIO White & Blue)
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('sipio-theme') || 'light'
+  })
+
+  // Contrast state: 'normal' | 'high' (Optimasi keterbacaan di luar ruangan / outdoor sunlight)
+  const [contrast, setContrast] = useState(() => {
+    return localStorage.getItem('sipio-contrast') || 'normal'
   })
 
   // Navigation tab state (synced across desktop sidebar & mobile bottom bar)
@@ -380,6 +383,11 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
 
+  // Apply contrast mode to document element
+  useEffect(() => {
+    document.documentElement.setAttribute('data-contrast', contrast)
+  }, [contrast])
+
   const toggleTheme = () => {
     setTheme((prev) => {
       const next = prev === 'dark' ? 'light' : 'dark'
@@ -388,6 +396,16 @@ export default function App() {
       } catch {
         // ignore in case of private mode restriction
       }
+      return next
+    })
+  }
+
+  const toggleContrast = () => {
+    setContrast((prev) => {
+      const next = prev === 'high' ? 'normal' : 'high'
+      try {
+        localStorage.setItem('sipio-contrast', next)
+      } catch {}
       return next
     })
   }
@@ -528,36 +546,14 @@ export default function App() {
         backendConnection={iotConnection}
         theme={theme}
         toggleTheme={toggleTheme}
+        contrast={contrast}
+        toggleContrast={toggleContrast}
         pwaState={pwaState}
         triggerHaptic={pwaState.triggerHaptic}
       />
 
       {/* Main Content Area */}
       <main className="app-main-content">
-        {/* 1. Header & Top Bar with Connectivity and PWA Installer */}
-        <Navbar
-          theme={theme}
-          toggleTheme={toggleTheme}
-          onOpenSettings={() => setActiveTab('settings')}
-          pwaState={pwaState}
-          espStatus={espStatus}
-          camStatus={camStatus}
-          backendConnection={iotConnection}
-        />
-
-        {/* 1.5 Interactive Browser Simulation Bar for Testing IoT States */}
-        <SimulationBar
-          telemetry={telemetry}
-          setTelemetry={setTelemetry}
-          espStatus={espStatus}
-          setEspStatus={setEspStatus}
-          camStatus={camStatus}
-          setCamStatus={setCamStatus}
-          onTriggerFeed={handleTriggerFeed}
-          onResetData={handleResetData}
-          triggerHaptic={pwaState.triggerHaptic}
-        />
-
         {/* Distinct Page Views */}
         {activeTab === 'overview' && (
           <OverviewPage
@@ -617,6 +613,8 @@ export default function App() {
             onSaveThresholds={setThresholds}
             theme={theme}
             toggleTheme={toggleTheme}
+            contrast={contrast}
+            toggleContrast={toggleContrast}
             espStatus={espStatus}
             camStatus={camStatus}
             backendConnection={iotConnection}

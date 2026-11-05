@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { LayoutDashboard, PlayCircle, Camera, TrendingUp, Settings } from 'lucide-react'
 
 export function MobileBottomNav({ 
@@ -12,12 +12,16 @@ export function MobileBottomNav({
     { id: 'feeder', label: 'Pakan', icon: PlayCircle },
     { id: 'camera', label: 'Kamera', icon: Camera },
     { id: 'temp', label: 'Suhu', icon: TrendingUp },
-    { id: 'settings', label: 'Setelan', icon: Settings }
+    { id: 'settings', label: 'Konfigurasi', icon: Settings }
   ]
 
   const handleTabClick = (item) => {
     if (triggerHaptic) triggerHaptic(30)
-    if (onTabChange) onTabChange(item.id)
+    if (item.id === 'settings' && onOpenSettings) {
+      onOpenSettings()
+    } else if (onTabChange) {
+      onTabChange(item.id)
+    }
   }
 
   return (
