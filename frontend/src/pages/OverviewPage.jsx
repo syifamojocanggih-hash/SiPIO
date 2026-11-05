@@ -7,7 +7,8 @@ import {
   Settings,
   ArrowRight,
   Wifi,
-  WifiOff
+  WifiOff,
+  Luggage
 } from 'lucide-react'
 import { MetricsOverview } from '../components/MetricsOverview'
 import { AlertBanner } from '../components/AlertBanner'
@@ -23,7 +24,8 @@ export function OverviewPage({
   camStatus,
   backendConnection,
   onNavigate,
-  triggerHaptic
+  triggerHaptic,
+  vacationMode
 }) {
   const isTempOutOfRange = telemetry.temp < thresholds.temp_min || telemetry.temp > thresholds.temp_max
 
@@ -58,6 +60,26 @@ export function OverviewPage({
           </p>
         </div>
       </div>
+
+      {/* Mode Liburan Akuarium Banner (jika aktif) */}
+      {vacationMode?.enabled && (
+        <div className="vacation-active-banner">
+          <div className="vacation-banner-icon">
+            <Luggage size={20} />
+          </div>
+          <div className="vacation-banner-text">
+            <strong>Mode Liburan Akuarium Aktif:</strong> Ditinggal {vacationMode.days} hari (Pulang: {vacationMode.returnDate || 'Sesuai jadwal'}). Porsi pakan hemat (-20%) berjalan otomatis untuk melindungi kejernihan air akuarium.
+          </div>
+          <button 
+            type="button" 
+            className="vacation-banner-btn"
+            onClick={() => onNavigate('feeder')}
+            aria-label="Kelola Mode Liburan di Halaman Pakan"
+          >
+            Kelola Liburan
+          </button>
+        </div>
+      )}
 
       {/* 2. Alert Banner (jika ada peringatan ambang batas) */}
       <AlertBanner alerts={activeAlerts} onDismissAlert={onDismissAlert} />

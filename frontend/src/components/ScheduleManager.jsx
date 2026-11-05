@@ -9,7 +9,8 @@ export function ScheduleManager({
   onDeleteSchedule,
   onUpdateSchedules, 
   triggerHaptic,
-  now = new Date()
+  now = new Date(),
+  vacationMode
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState(null)
@@ -210,7 +211,19 @@ export function ScheduleManager({
                   <div className="schedule-meta">
                     <span className="schedule-days">{sch.days || 'Setiap Hari'}</span>
                     <span className="schedule-duration">
-                      Durasi: <strong>{sch.duration_ms} ms</strong> <span className="schedule-dose">(~{(sch.duration_ms / 400).toFixed(0)}g)</span>
+                      Durasi:{' '}
+                      {vacationMode?.enabled && vacationMode?.ecoMode ? (
+                        <>
+                          <strong>{Math.max(800, Math.round(sch.duration_ms * 0.8))} ms</strong>{' '}
+                          <span className="schedule-dose">(~{(Math.max(800, Math.round(sch.duration_ms * 0.8)) / 400).toFixed(0)}g)</span>{' '}
+                          <span style={{ color: 'var(--status-emerald)', fontSize: '0.72rem', fontWeight: 700 }}>[Hemat -20%]</span>
+                        </>
+                      ) : (
+                        <>
+                          <strong>{sch.duration_ms} ms</strong>{' '}
+                          <span className="schedule-dose">(~{(sch.duration_ms / 400).toFixed(0)}g)</span>
+                        </>
+                      )}
                     </span>
                   </div>
                 </div>

@@ -3,6 +3,7 @@ import { PlayCircle } from 'lucide-react'
 import { FeedActionCard } from '../components/FeedActionCard'
 import { ScheduleManager } from '../components/ScheduleManager'
 import { FeedLogs } from '../components/FeedLogs'
+import { VacationModeCard } from '../components/VacationModeCard'
 
 export function FeederPage({
   telemetry,
@@ -18,7 +19,9 @@ export function FeederPage({
   onToggleSchedule,
   onDeleteSchedule,
   onUpdateSchedules,
-  triggerHaptic
+  triggerHaptic,
+  vacationMode,
+  onUpdateVacationMode
 }) {
   const [now, setNow] = useState(() => new Date())
 
@@ -106,6 +109,12 @@ export function FeederPage({
               {isWaterLow ? 'Rendah (Hold)' : 'Normal (Aman)'}
             </span>
           </div>
+          <div className="header-stat-chip">
+            <span className="stat-chip-label">Mode Liburan</span>
+            <span className={`stat-chip-val ${vacationMode?.enabled ? 'text-emerald' : 'text-cyan'}`}>
+              {vacationMode?.enabled ? `${vacationMode.days} Hari (-20%)` : 'Siaga'}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -122,7 +131,18 @@ export function FeederPage({
         />
       </div>
 
-      {/* 3. Two-Column Grid: Schedule Manager & Feeding Logs */}
+      {/* 3. Mode Liburan Akuarium (Vacation Safe Mode) */}
+      <div className="feeder-vacation-section">
+        <VacationModeCard
+          vacationMode={vacationMode}
+          onUpdateVacationMode={onUpdateVacationMode}
+          schedules={schedules}
+          telemetry={telemetry}
+          triggerHaptic={triggerHaptic}
+        />
+      </div>
+
+      {/* 4. Two Stacked Sections: Schedule Manager & Feeding Logs */}
       <div className="feeder-content-grid">
         <div className="feeder-schedule-col">
           <ScheduleManager
@@ -134,6 +154,7 @@ export function FeederPage({
             onUpdateSchedules={onUpdateSchedules}
             triggerHaptic={triggerHaptic}
             now={now}
+            vacationMode={vacationMode}
           />
         </div>
 

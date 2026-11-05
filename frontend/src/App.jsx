@@ -95,6 +95,37 @@ export default function App() {
   // Temperature Historical Dataset (D-02)
   const [tempHistory, setTempHistory] = useState(INITIAL_TEMP_HISTORY)
 
+  // Mode Liburan Akuarium (Vacation Safe Mode)
+  const [vacationMode, setVacationMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sipio_vacation_mode')
+      return saved ? JSON.parse(saved) : {
+        enabled: false,
+        days: 4,
+        returnDate: '',
+        hopperStockGrams: 80,
+        ecoMode: true,
+        waterCheckConfirmed: true
+      }
+    } catch {
+      return {
+        enabled: false,
+        days: 4,
+        returnDate: '',
+        hopperStockGrams: 80,
+        ecoMode: true,
+        waterCheckConfirmed: true
+      }
+    }
+  })
+
+  // Persist status mode liburan ke localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('sipio_vacation_mode', JSON.stringify(vacationMode))
+    } catch {}
+  }, [vacationMode])
+
   // Real-time camera snapshot updates from ESP32-CAM
   const [cameraUpdate, setCameraUpdate] = useState(null)
 
@@ -476,6 +507,18 @@ export default function App() {
   const handleTriggerFeed = async (newFeedEvent) => {
     pwaState.triggerHaptic(40)
 
+    // Modulasi Mode Liburan: kurangi porsi pakan 20% jika opsi porsi hemat aktif
+    let finalFeedEvent = { ...newFeedEvent }
+    if (vacationMode?.enabled && vacationMode?.ecoMode) {
+      const originalDuration = Number(finalFeedEvent.duration_ms) || 2000
+      const ecoDuration = Math.max(800, Math.round(originalDuration * 0.8))
+      finalFeedEvent.duration_ms = ecoDuration
+      if (!finalFeedEvent.source?.includes('Liburan')) {
+        finalFeedEvent.source = `${finalFeedEvent.source} (Hemat -20%)`
+      }
+      finalFeedEvent.reason = 'Eksekusi porsi pakan hemat 20% selama masa liburan akuarium'
+    }
+
     // Catat waktu pakan terkini untuk memulai countdown 30 menit
     const now = Date.now()
     setLastFeedTimestamp(now)
@@ -485,7 +528,7 @@ export default function App() {
 
     if (iotConnection.backendOnline) {
       try {
-        const res = await iotConnection.triggerRemoteFeed(newFeedEvent.duration_ms, newFeedEvent.source)
+        const res = await iotConnection.triggerRemoteFeed(finalFeedEvent.duration_ms, finalFeedEvent.source)
         if (res.log) {
           setFeedLogs((prev) => {
             if (prev.some((p) => p.id === res.log.id)) return prev
@@ -509,7 +552,7 @@ export default function App() {
     const newEntry = {
       id: Date.now(),
       timestamp: `${day} ${month} ${year} ${timeStr}`,
-      ...newFeedEvent
+      ...finalFeedEvent
     }
     setFeedLogs((prev) => [newEntry, ...prev])
   }
@@ -566,6 +609,7 @@ export default function App() {
             onNavigate={setActiveTab}
             onTriggerFeed={handleTriggerFeed}
             triggerHaptic={pwaState.triggerHaptic}
+            vacationMode={vacationMode}
           />
         )}
 
@@ -585,6 +629,8 @@ export default function App() {
             onDeleteSchedule={handleDeleteSchedule}
             onUpdateSchedules={setSchedules}
             triggerHaptic={pwaState.triggerHaptic}
+            vacationMode={vacationMode}
+            onUpdateVacationMode={setVacationMode}
           />
         )}
 
