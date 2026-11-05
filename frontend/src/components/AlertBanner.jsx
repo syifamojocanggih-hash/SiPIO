@@ -6,6 +6,8 @@ export function AlertBanner({ alerts, onDismissAlert }) {
 
   // Show the highest priority alert first
   const currentAlert = alerts[0]
+  // Jangan tampilkan tombol tutup/hapus jika peringatan bersifat berbahaya (kuning = warning, merah = danger)
+  const isDangerous = currentAlert.type === 'warning' || currentAlert.type === 'danger'
 
   return (
     <div 
@@ -24,15 +26,17 @@ export function AlertBanner({ alerts, onDismissAlert }) {
         </div>
       </div>
 
-      <button 
-        type="button" 
-        className="alert-dismiss-btn" 
-        onClick={() => onDismissAlert(currentAlert.id)}
-        aria-label="Tutup Peringatan Ini"
-        title="Tutup Peringatan"
-      >
-        <X size={18} />
-      </button>
+      {!isDangerous && onDismissAlert && (
+        <button 
+          type="button" 
+          className="alert-dismiss-btn" 
+          onClick={() => onDismissAlert(currentAlert.id)}
+          aria-label="Tutup Peringatan Ini"
+          title="Tutup Peringatan"
+        >
+          <X size={18} />
+        </button>
+      )}
     </div>
   )
 }
