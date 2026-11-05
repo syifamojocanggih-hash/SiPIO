@@ -44,14 +44,14 @@ export function TempPage({ telemetry, thresholds, tempHistory }) {
             <div className="page-icon-badge temp">
               <TrendingUp size={20} />
             </div>
-            <h1 className="page-title">Tren & Analisis Suhu Air (DS18B20)</h1>
+            <h1 className="page-title">Tren & Analisis Suhu Air</h1>
             <span className={`page-status-badge ${tempStatusClass}`}>
               <span className="pulse-indicator" />
               {tempStatusLabel}
             </span>
           </div>
           <p className="page-subtitle">
-            Sensor waterproof Dallas DS18B20 memantau fluktuasi suhu air kolam sepanjang hari demi menjaga kesehatan ikan
+            Sensor suhu waterproof memantau fluktuasi suhu air kolam sepanjang hari demi menjaga kesehatan ikan
           </p>
         </div>
 

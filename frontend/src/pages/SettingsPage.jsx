@@ -80,7 +80,7 @@ export function SettingsPage({
             <div>
               <h2 className="card-title">
                 <Sliders size={18} className="text-cyan" />
-                Ambang Batas Suhu Air (DS18B20)
+                Ambang Batas Suhu Air
               </h2>
               <p className="card-subtitle">
                 Alarm peringatan otomatis akan dipicu jika suhu air kolam melewati batas ini

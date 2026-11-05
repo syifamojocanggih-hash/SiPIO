@@ -49,7 +49,7 @@ export function CameraMonitor({ camStatus, cameraUpdate }) {
         <div>
           <h2 className="card-title">
             <Camera size={18} className="text-cyan" />
-            Pemantauan Kamera ESP32-CAM
+            Pemantauan Kamera Kolam
           </h2>
           <p className="card-subtitle">Pantau kondisi ikan di kolam dan sisa pakan di wadah hopper</p>
         </div>
@@ -109,7 +109,7 @@ export function CameraMonitor({ camStatus, cameraUpdate }) {
         {/* Status badges */}
         <div className="camera-overlay-badge">
           <span className={`status-dot ${camStatus.online ? 'online' : 'offline'}`} />
-          <span>ESP32-CAM: {activeArea === 'kolam' ? 'Kolam Ikan' : 'Hopper Feeder'}</span>
+          <span>Kamera: {activeArea === 'kolam' ? 'Kolam Ikan' : 'Hopper Feeder'}</span>
         </div>
 
         <div className="camera-timestamp-badge">
@@ -120,7 +120,7 @@ export function CameraMonitor({ camStatus, cameraUpdate }) {
         {!camStatus.online && (
           <div className="camera-offline-overlay" role="alert">
             <CameraOff size={32} style={{ color: 'var(--status-rose)', marginBottom: '8px' }} />
-            <strong style={{ fontSize: '0.95rem' }}>ESP32-CAM Sedang Offline</strong>
+            <strong style={{ fontSize: '0.95rem' }}>Kamera Sedang Offline</strong>
             <p style={{ fontSize: '0.78rem', color: '#cbd5e1', marginTop: '4px', textAlign: 'center', maxWidth: '300px' }}>
               Snapshot di atas adalah tangkapan terakhir. Periksa catu daya 5V dan sinyal WiFi modul kamera.
             </p>
@@ -153,7 +153,7 @@ export function CameraMonitor({ camStatus, cameraUpdate }) {
           <div className="modal-box" style={{ maxWidth: '800px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3 style={{ fontSize: '1rem', fontWeight: '700' }}>
-                Snapshot {activeArea === 'kolam' ? 'Kolam Ikan' : 'Wadah Hopper'} (ESP32-CAM)
+                Snapshot {activeArea === 'kolam' ? 'Kolam Ikan' : 'Wadah Hopper'}
               </h3>
               <button 
                 type="button" 

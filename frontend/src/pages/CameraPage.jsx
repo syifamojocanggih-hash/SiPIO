@@ -12,14 +12,14 @@ export function CameraPage({ camStatus, cameraUpdate }) {
             <div className="page-icon-badge camera">
               <Camera size={20} />
             </div>
-            <h1 className="page-title">Monitoring Kamera Kolam (ESP32-CAM)</h1>
+            <h1 className="page-title">Monitoring Kamera Kolam</h1>
             <span className={`page-status-badge ${camStatus.online ? 'success' : 'danger'}`}>
               <span className="pulse-indicator" />
               {camStatus.online ? 'Kamera Aktif & Live' : 'Kamera Offline'}
             </span>
           </div>
           <p className="page-subtitle">
-            Pemantauan visual langsung aktivitas ikan di kolam dan sisa pakan di wadah hopper via modul ESP32-CAM
+            Pemantauan visual langsung aktivitas ikan di kolam dan sisa pakan di wadah hopper
           </p>
         </div>
 

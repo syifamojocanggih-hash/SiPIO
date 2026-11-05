@@ -67,7 +67,7 @@ export function FeedLogs({ logs }) {
         <div>
           <h2 className="card-title">
             <FileText size={18} className="text-cyan" />
-            Riwayat Pemberian Pakan (D-05)
+            Riwayat Pemberian Pakan
           </h2>
           <p className="card-subtitle">Log riwayat eksekusi jadwal pakan dan intervensi manual</p>
         </div>
@@ -123,9 +123,9 @@ export function FeedLogs({ logs }) {
             ) : (
               filteredLogs.map((log) => (
                 <tr key={log.id}>
-                  <td style={{ fontFamily: 'var(--font-mono)' }}>{log.timestamp}</td>
+                  <td style={{ fontVariantNumeric: 'tabular-nums' }}>{log.timestamp}</td>
                   <td>{log.source}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)' }}>{log.duration_ms} ms</td>
+                  <td style={{ fontVariantNumeric: 'tabular-nums' }}>{log.duration_ms} ms</td>
                   <td>{getStatusBadge(log.result)}</td>
                   <td className="text-muted">{log.reason || '-'}</td>
                 </tr>

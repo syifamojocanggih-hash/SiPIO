@@ -17,10 +17,7 @@ export function Navbar({
           <img src="/sipio-icon.svg" alt="SiPio Logo" width="38" height="38" />
         </div>
         <div className="brand-info">
-          <h1>
-            SiPio
-            <span className="brand-badge">IoT v1.3</span>
-          </h1>
+          <h1>SiPio</h1>
           <p className="brand-subtitle">Smart Fish Feeder & Pond Monitoring</p>
         </div>
       </div>

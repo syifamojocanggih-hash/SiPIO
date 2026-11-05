@@ -8,7 +8,8 @@ export function ScheduleManager({
   onToggleSchedule,
   onDeleteSchedule,
   onUpdateSchedules, 
-  triggerHaptic 
+  triggerHaptic,
+  now = new Date()
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState(null)
@@ -31,6 +32,40 @@ export function ScheduleManager({
       return toMinutes(a.time) - toMinutes(b.time)
     })
   }, [schedules])
+
+  // Cek apakah jadwal jam tertentu sudah dilaksanakan hari ini (jam sudah lewat = Sudah, belum = Belum)
+  const getScheduleExecution = (sch) => {
+    if (!sch.enabled) return { label: 'Nonaktif', isDone: false, appliesToday: false }
+
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+    const currentDayIdx = now.getDay()
+    const dayNames = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu']
+    const currentDayName = dayNames[currentDayIdx]
+    const isWeekend = currentDayIdx === 0 || currentDayIdx === 6
+
+    const daysStr = (sch.days || 'Setiap Hari').toLowerCase()
+    let appliesToday = true
+    if (daysStr.includes('setiap hari') || daysStr.includes('daily') || daysStr.includes('all')) {
+      appliesToday = true
+    } else if (daysStr.includes('akhir pekan') || daysStr.includes('weekend')) {
+      appliesToday = isWeekend
+    } else if (daysStr.includes('hari kerja') || daysStr.includes('weekday')) {
+      appliesToday = !isWeekend
+    } else {
+      appliesToday = daysStr.includes(currentDayName)
+    }
+
+    if (!appliesToday) return { label: 'Bukan Hari Ini', isDone: false, appliesToday: false }
+
+    const [h, m] = String(sch.time || '00:00').split(':').map(Number)
+    const schMinutes = (h || 0) * 60 + (m || 0)
+
+    if (currentMinutes >= schMinutes) {
+      return { label: 'Sudah', isDone: true, appliesToday: true }
+    } else {
+      return { label: 'Belum', isDone: false, appliesToday: true }
+    }
+  }
 
   // Keyboard accessibility: Escape closes modal (R-32)
   useEffect(() => {
@@ -141,9 +176,9 @@ export function ScheduleManager({
         <div className="schedule-header-text">
           <h2 className="card-title">
             <Clock size={18} className="text-cyan" />
-            <span>Pengelola Jadwal Pakan (D-04)</span>
+            <span>Pengelola Jadwal Pakan</span>
           </h2>
-          <p className="card-subtitle">Jadwal disimpan mandiri di LittleFS ESP8266, tetap berjalan saat WiFi putus</p>
+          <p className="card-subtitle">Jadwal disimpan mandiri di memori lokal, tetap berjalan saat WiFi putus</p>
         </div>
 
         <button 
@@ -168,8 +203,8 @@ export function ScheduleManager({
               key={sch.id} 
               className={`schedule-item ${!sch.enabled ? 'schedule-disabled' : ''}`}
             >
-              {/* Baris utama: Jam, frekuensi hari, durasi pakan & sakelar switch */}
-              <div className="schedule-main">
+              {/* Kolom kiri: Jam, frekuensi hari, durasi pakan */}
+              <div className="schedule-left">
                 <div className="schedule-time-box">
                   <span className="schedule-time">{sch.time}</span>
                   <div className="schedule-meta">
@@ -179,30 +214,37 @@ export function ScheduleManager({
                     </span>
                   </div>
                 </div>
-
-                <div className="schedule-toggle-wrapper">
-                  <label className="switch" title={sch.enabled ? 'Nonaktifkan Jadwal' : 'Aktifkan Jadwal'}>
-                    <input
-                      type="checkbox"
-                      checked={sch.enabled}
-                      onChange={() => handleToggle(sch)}
-                      aria-label={`Status aktif jadwal jam ${sch.time}`}
-                    />
-                    <span className="slider" />
-                  </label>
-                </div>
               </div>
 
-              {/* Baris bawah: Tag status sinkronisasi & aksi ubah/hapus */}
-              <div className="schedule-footer">
-                <span 
-                  className="status-tag success" 
-                  title="Tersimpan di memori lokal ESP8266 LittleFS"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                >
-                  <CheckCircle2 size={12} />
-                  <span>Tersinkron</span>
-                </span>
+              {/* Kolom kanan: Status eksekusi hari ini (Sudah / Belum), aksi edit/hapus & sakelar toggle (rata kanan) */}
+              <div className="schedule-right">
+                {sch.enabled ? (
+                  (() => {
+                    const exec = getScheduleExecution(sch)
+                    return (
+                      <span 
+                        className={`status-tag ${exec.isDone ? 'success' : exec.appliesToday ? 'warning' : ''}`}
+                        title={exec.isDone 
+                          ? `Jadwal pakan jam ${sch.time} sudah terlaksana hari ini` 
+                          : exec.appliesToday 
+                          ? `Jadwal pakan jam ${sch.time} belum terlaksana (menunggu waktu pakan)` 
+                          : 'Jadwal tidak aktif hari ini'}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        {exec.isDone ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+                        <span>{exec.label}</span>
+                      </span>
+                    )
+                  })()
+                ) : (
+                  <span 
+                    className="status-tag"
+                    title="Jadwal dinonaktifkan"
+                    style={{ opacity: 0.65 }}
+                  >
+                    <span>Nonaktif</span>
+                  </span>
+                )}
 
                 <div className="schedule-actions">
                   {/* Edit Button */}
@@ -226,6 +268,18 @@ export function ScheduleManager({
                   >
                     <Trash2 size={14} />
                   </button>
+                </div>
+
+                <div className="schedule-toggle-wrapper">
+                  <label className="switch" title={sch.enabled ? 'Nonaktifkan Jadwal' : 'Aktifkan Jadwal'}>
+                    <input
+                      type="checkbox"
+                      checked={sch.enabled}
+                      onChange={() => handleToggle(sch)}
+                      aria-label={`Status aktif jadwal jam ${sch.time}`}
+                    />
+                    <span className="slider" />
+                  </label>
                 </div>
               </div>
             </div>

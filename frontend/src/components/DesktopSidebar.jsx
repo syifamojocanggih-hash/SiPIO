@@ -5,24 +5,18 @@ import {
   Camera,
   TrendingUp,
   Settings,
-  Wifi,
-  WifiOff,
   Sun,
   Moon,
   Contrast,
   SlidersHorizontal,
   Download,
-  CheckCircle,
-  Activity
+  CheckCircle
 } from 'lucide-react'
 
 export function DesktopSidebar({
   activeTab = 'overview',
   onTabChange,
   onOpenSettings,
-  espStatus,
-  camStatus,
-  backendConnection,
   theme,
   toggleTheme,
   contrast = 'normal',
@@ -77,7 +71,6 @@ export function DesktopSidebar({
         <div className="sidebar-brand-text">
           <div className="sidebar-brand-title">
             <span>SiPIO</span>
-            <span className="brand-badge">IoT v1.3</span>
           </div>
           <p className="sidebar-brand-subtitle">Smart Fish Feeder</p>
         </div>
@@ -110,54 +103,7 @@ export function DesktopSidebar({
         </nav>
       </div>
 
-      {/* 3. Hardware & Telemetry Status Card */}
-      <div className="sidebar-status-card">
-        <div className="sidebar-status-header">
-          <Activity size={14} className="text-cyan" />
-          <span>Status Perangkat</span>
-        </div>
-
-        <div className="sidebar-status-list">
-          {/* Backend / WebSocket */}
-          <div className="sidebar-status-row">
-            <span className="status-label">FastAPI Backend:</span>
-            <span className="status-value">
-              <span className={`status-dot ${backendConnection?.isConnected ? 'online' : 'simulated'}`} />
-              {backendConnection?.isConnected ? 'Terhubung' : 'Simulasi'}
-            </span>
-          </div>
-
-          {/* ESP8266 Feeder */}
-          <div className="sidebar-status-row">
-            <span className="status-label">ESP8266 Feeder:</span>
-            <span className="status-value">
-              <span className={`status-dot ${espStatus.online ? 'online' : 'offline'}`} />
-              {espStatus.online ? (
-                <>
-                  <Wifi size={12} style={{ color: 'var(--status-emerald)' }} />
-                  <span>{espStatus.rssi} dBm</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff size={12} style={{ color: 'var(--status-rose)' }} />
-                  <span>Offline</span>
-                </>
-              )}
-            </span>
-          </div>
-
-          {/* ESP32-CAM */}
-          <div className="sidebar-status-row">
-            <span className="status-label">ESP32-CAM:</span>
-            <span className="status-value">
-              <span className={`status-dot ${camStatus.online ? 'online' : 'offline'}`} />
-              <span>{camStatus.online ? 'Aktif' : 'Mati'}</span>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Pengaturan Khusus Tampilan (Mode Gelap & Kontras) */}
+      {/* 3. Pengaturan Khusus Tampilan (Mode Gelap & Kontras) */}
       <div className="sidebar-footer">
         <div className="sidebar-display-settings">
           <div className="sidebar-settings-header">

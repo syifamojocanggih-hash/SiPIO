@@ -21,10 +21,10 @@ export function MetricsOverview({ telemetry, thresholds, lastFeed }) {
 
   return (
     <section id="sec-overview" className="metrics-row" aria-label="Ringkasan Metrik Kolam">
-      {/* 1. Suhu Air (DS18B20) */}
+      {/* 1. Suhu Air */}
       <article className="metric-card">
         <div className="metric-header">
-          <span className="metric-label">Suhu Air (DS18B20)</span>
+          <span className="metric-label">Suhu Air</span>
           <div className="metric-icon-box" aria-hidden="true">
             <Thermometer size={20} />
           </div>
@@ -43,10 +43,10 @@ export function MetricsOverview({ telemetry, thresholds, lastFeed }) {
         </div>
       </article>
 
-      {/* 2. Level Air Kolam (Float Switch) */}
+      {/* 2. Level Air Kolam */}
       <article className="metric-card">
         <div className="metric-header">
-          <span className="metric-label">Level Air (Float Switch)</span>
+          <span className="metric-label">Level Air</span>
           <div className="metric-icon-box" aria-hidden="true">
             <Waves size={20} />
           </div>

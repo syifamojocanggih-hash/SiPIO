@@ -541,9 +541,6 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onOpenSettings={() => setActiveTab('settings')}
-        espStatus={espStatus}
-        camStatus={camStatus}
-        backendConnection={iotConnection}
         theme={theme}
         toggleTheme={toggleTheme}
         contrast={contrast}

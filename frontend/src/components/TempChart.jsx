@@ -48,7 +48,7 @@ export function TempChart({ thresholds, historyData = INITIAL_TEMP_HISTORY }) {
         <div>
           <h2 className="card-title">
             <TrendingUp size={18} className="text-cyan" />
-            Grafik Tren Suhu Air (DS18B20)
+            Grafik Tren Suhu Air
           </h2>
           <p className="card-subtitle">Rentang aman 24°C - 32°C ditandai dengan area hijau transparan</p>
         </div>
@@ -123,7 +123,7 @@ export function TempChart({ thresholds, historyData = INITIAL_TEMP_HISTORY }) {
                     fill="var(--text-dim)"
                     fontSize="10"
                     textAnchor="end"
-                    fontFamily="var(--font-mono)"
+                    fontFamily="var(--font-sans)"
                   >
                     {tempLine}°
                   </text>
@@ -168,7 +168,7 @@ export function TempChart({ thresholds, historyData = INITIAL_TEMP_HISTORY }) {
                     fill="var(--text-dim)"
                     fontSize="10"
                     textAnchor="middle"
-                    fontFamily="var(--font-mono)"
+                    fontFamily="var(--font-sans)"
                   >
                     {pt.time}
                   </text>
@@ -192,7 +192,7 @@ export function TempChart({ thresholds, historyData = INITIAL_TEMP_HISTORY }) {
                         fontSize="10"
                         fontWeight="bold"
                         textAnchor="middle"
-                        fontFamily="var(--font-mono)"
+                        fontFamily="var(--font-sans)"
                       >
                         {pt.temp}°C
                       </text>

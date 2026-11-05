@@ -36,7 +36,7 @@ export function SettingsModal({ thresholds, onSave, onClose, triggerHaptic }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Settings size={20} className="text-cyan" />
             <h3 id="settings-title" style={{ fontSize: '1.05rem', fontWeight: '700' }}>
-              Pengaturan Ambang Batas Sistem (D-06)
+              Pengaturan Ambang Batas Sistem
             </h3>
           </div>
           <button 

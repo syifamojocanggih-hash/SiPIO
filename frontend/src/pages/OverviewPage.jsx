@@ -133,7 +133,7 @@ export function OverviewPage({
               </div>
               <div>
                 <h3 className="overview-module-title">Kamera Kolam</h3>
-                <span className="overview-module-caption">ESP32-CAM Real-time Stream</span>
+                <span className="overview-module-caption">Live Stream Kamera</span>
               </div>
             </div>
             <span className={`status-badge-compact ${camStatus.online ? 'success' : 'danger'}`}>
@@ -184,7 +184,7 @@ export function OverviewPage({
               </div>
               <div>
                 <h3 className="overview-module-title">Tren Suhu Air</h3>
-                <span className="overview-module-caption">Sensor Waterproof DS18B20</span>
+                <span className="overview-module-caption">Sensor Suhu Waterproof</span>
               </div>
             </div>
             <span className={`status-badge-compact ${isTempOutOfRange ? 'warning' : 'success'}`}>
@@ -250,7 +250,7 @@ export function OverviewPage({
 
           <div className="overview-module-body">
             <div className="quick-info-row">
-              <span className="quick-info-label">ESP8266 Feeder:</span>
+              <span className="quick-info-label">Feeder Pakan:</span>
               <span className="quick-info-value">
                 {espStatus.online ? (
                   <span className="inline-status text-emerald">
@@ -264,7 +264,7 @@ export function OverviewPage({
               </span>
             </div>
             <div className="quick-info-row">
-              <span className="quick-info-label">ESP32-CAM:</span>
+              <span className="quick-info-label">Kamera Kolam:</span>
               <span className="quick-info-value">
                 {camStatus.online ? (
                   <span className="inline-status text-emerald">Aktif & Siap</span>
