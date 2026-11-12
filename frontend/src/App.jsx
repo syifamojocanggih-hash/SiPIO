@@ -26,6 +26,25 @@ import {
   sendBrowserNotification
 } from './utils/notifications'
 
+function readStoredJson(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return fallback
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(fallback)) {
+      return Array.isArray(parsed) ? parsed : fallback
+    }
+    if (fallback && typeof fallback === 'object') {
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? { ...fallback, ...parsed }
+        : fallback
+    }
+    return parsed ?? fallback
+  } catch {
+    return fallback
+  }
+}
+
 export default function App() {
   // Theme state: 'light' by default for optimal outdoor sunlight readability (SiPIO White & Blue)
   const [theme, setTheme] = useState(() => {
@@ -57,14 +76,9 @@ export default function App() {
   const [telemetry, setTelemetry] = useState(INITIAL_TELEMETRY)
 
   // System Thresholds (PRD Section 13.1) with localStorage caching
-  const [thresholds, setThresholds] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sipio_thresholds')
-      return saved ? JSON.parse(saved) : INITIAL_THRESHOLDS
-    } catch {
-      return INITIAL_THRESHOLDS
-    }
-  })
+  const [thresholds, setThresholds] = useState(() =>
+    readStoredJson('sipio_thresholds', INITIAL_THRESHOLDS)
+  )
 
   useEffect(() => {
     try {
@@ -73,15 +87,9 @@ export default function App() {
   }, [thresholds])
 
   // Schedules (PRD Section 13 & D-04) with localStorage caching, sorted chronologically
-  const [schedules, setSchedules] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sipio_schedules')
-      const parsed = saved ? JSON.parse(saved) : INITIAL_SCHEDULES
-      return sortSchedulesByTime(parsed)
-    } catch {
-      return sortSchedulesByTime(INITIAL_SCHEDULES)
-    }
-  })
+  const [schedules, setSchedules] = useState(() =>
+    sortSchedulesByTime(readStoredJson('sipio_schedules', INITIAL_SCHEDULES))
+  )
 
   // Persist schedules to localStorage whenever they change
   useEffect(() => {
@@ -93,14 +101,9 @@ export default function App() {
   }, [schedules])
 
   // Feed Logs (PRD Section 13 & D-05) with localStorage caching
-  const [feedLogs, setFeedLogs] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sipio_feed_logs')
-      return saved ? JSON.parse(saved) : INITIAL_FEED_LOGS
-    } catch {
-      return INITIAL_FEED_LOGS
-    }
-  })
+  const [feedLogs, setFeedLogs] = useState(() =>
+    readStoredJson('sipio_feed_logs', INITIAL_FEED_LOGS)
+  )
 
   // Persist feedLogs to localStorage whenever they change
   useEffect(() => {
@@ -115,28 +118,16 @@ export default function App() {
   const [tempHistory, setTempHistory] = useState(INITIAL_TEMP_HISTORY)
 
   // Mode Liburan Akuarium (Vacation Safe Mode)
-  const [vacationMode, setVacationMode] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sipio_vacation_mode')
-      return saved ? JSON.parse(saved) : {
-        enabled: false,
-        days: 4,
-        returnDate: '',
-        hopperStockGrams: 80,
-        ecoMode: true,
-        waterCheckConfirmed: true
-      }
-    } catch {
-      return {
-        enabled: false,
-        days: 4,
-        returnDate: '',
-        hopperStockGrams: 80,
-        ecoMode: true,
-        waterCheckConfirmed: true
-      }
-    }
-  })
+  const [vacationMode, setVacationMode] = useState(() =>
+    readStoredJson('sipio_vacation_mode', {
+      enabled: false,
+      days: 4,
+      returnDate: '',
+      hopperStockGrams: 120,
+      ecoMode: true,
+      waterCheckConfirmed: true
+    })
+  )
 
   // Persist status mode liburan ke localStorage
   useEffect(() => {
@@ -146,18 +137,13 @@ export default function App() {
   }, [vacationMode])
 
   // Pelacak Stok Pelet Harian (Hopper Stock)
-  const [hopperStock, setHopperStock] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sipio_hopper_stock')
-      return saved ? JSON.parse(saved) : {
-        currentGrams: 120,
-        capacityGrams: 200,
-        lastRefillAt: null
-      }
-    } catch {
-      return { currentGrams: 120, capacityGrams: 200, lastRefillAt: null }
-    }
-  })
+  const [hopperStock, setHopperStock] = useState(() =>
+    readStoredJson('sipio_hopper_stock', {
+      currentGrams: 120,
+      capacityGrams: 200,
+      lastRefillAt: null
+    })
+  )
 
   useEffect(() => {
     try {
@@ -166,18 +152,13 @@ export default function App() {
   }, [hopperStock])
 
   // Pelacak Ganti Air & Buku Catatan Perawatan Akuarium
-  const [aquariumCare, setAquariumCare] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sipio_aquarium_care')
-      return saved ? JSON.parse(saved) : {
-        intervalDays: 7,
-        lastWaterChangeAt: null,
-        notes: []
-      }
-    } catch {
-      return { intervalDays: 7, lastWaterChangeAt: null, notes: [] }
-    }
-  })
+  const [aquariumCare, setAquariumCare] = useState(() =>
+    readStoredJson('sipio_aquarium_care', {
+      intervalDays: 7,
+      lastWaterChangeAt: null,
+      notes: []
+    })
+  )
 
   useEffect(() => {
     try {
@@ -186,14 +167,9 @@ export default function App() {
   }, [aquariumCare])
 
   // Riwayat Galeri Snapshot Kamera (Hanya diisi dari tangkapan nyata)
-  const [snapshotHistory, setSnapshotHistory] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sipio_snapshots')
-      return saved ? JSON.parse(saved) : []
-    } catch {
-      return []
-    }
-  })
+  const [snapshotHistory, setSnapshotHistory] = useState(() =>
+    readStoredJson('sipio_snapshots', [])
+  )
 
   useEffect(() => {
     try {
@@ -202,14 +178,9 @@ export default function App() {
   }, [snapshotHistory])
 
   // Preferensi Notifikasi Browser & Alarm Suara
-  const [alertPrefs, setAlertPrefs] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sipio_alert_prefs')
-      return saved ? JSON.parse(saved) : { browserNotif: false, soundAlert: false }
-    } catch {
-      return { browserNotif: false, soundAlert: false }
-    }
-  })
+  const [alertPrefs, setAlertPrefs] = useState(() =>
+    readStoredJson('sipio_alert_prefs', { browserNotif: false, soundAlert: false })
+  )
 
   useEffect(() => {
     try {
@@ -284,20 +255,6 @@ export default function App() {
       return [entry, ...prev].slice(0, 8)
     })
   }, [])
-
-  const handleSaveThresholds = useCallback(async (newThresholds) => {
-    setThresholds(newThresholds)
-    try {
-      localStorage.setItem('sipio_thresholds', JSON.stringify(newThresholds))
-    } catch {}
-    if (iotConnection?.backendOnline) {
-      try {
-        await api.updateThresholds(newThresholds)
-      } catch (err) {
-        console.warn('[SiPIO] Gagal sinkron ambang batas ke backend:', err)
-      }
-    }
-  }, [iotConnection?.backendOnline])
 
   const handleRefillHopper = useCallback(() => {
     const nowTs = Date.now()
@@ -464,6 +421,20 @@ export default function App() {
     onThresholdsUpdate: handleThresholdsUpdate,
     onCameraUpdate: handleCameraUpdate
   })
+
+  const handleSaveThresholds = useCallback(async (newThresholds) => {
+    setThresholds(newThresholds)
+    try {
+      localStorage.setItem('sipio_thresholds', JSON.stringify(newThresholds))
+    } catch {}
+    if (iotConnection?.backendOnline) {
+      try {
+        await api.updateThresholds(newThresholds)
+      } catch (err) {
+        console.warn('[SiPIO] Gagal sinkron ambang batas ke backend:', err)
+      }
+    }
+  }, [iotConnection?.backendOnline])
 
   // Persistent Schedule Handlers (MySQL REST API + MQTT LittleFS Sync + Local Storage)
   const handleAddSchedule = useCallback(async (scheduleData) => {

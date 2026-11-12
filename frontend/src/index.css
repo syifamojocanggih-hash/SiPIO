@@ -4023,27 +4023,24 @@ input:checked + .slider:before {
 .hub-text-link-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   min-height: 36px;
   padding: 6px 12px;
-  border-radius: var(--radius-full);
-  background-color: var(--accent-blue-soft);
-  border: 1px solid var(--accent-blue-border);
-  color: var(--accent-cyan);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
   font-size: 0.76rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-[data-theme='light'] .hub-text-link-btn {
-  color: var(--accent-primary);
+  box-shadow: var(--shadow-sm);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
 .hub-text-link-btn:hover {
-  background-color: var(--accent-primary);
-  border-color: var(--accent-primary);
-  color: #ffffff;
+  background-color: var(--bg-card-subtle);
+  border-color: var(--border-strong);
+  color: var(--text-main);
 }
 
 .chart-empty-state {
