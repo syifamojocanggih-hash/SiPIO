@@ -4,6 +4,7 @@ import { FeedActionCard } from '../components/FeedActionCard'
 import { ScheduleManager } from '../components/ScheduleManager'
 import { FeedLogs } from '../components/FeedLogs'
 import { VacationModeCard } from '../components/VacationModeCard'
+import { AquariumCareCard } from '../components/AquariumCareCard'
 
 export function FeederPage({
   telemetry,
@@ -21,7 +22,15 @@ export function FeederPage({
   onUpdateSchedules,
   triggerHaptic,
   vacationMode,
-  onUpdateVacationMode
+  onUpdateVacationMode,
+  hopperStock,
+  onRefillHopper,
+  onUpdateHopperCapacity,
+  aquariumCare,
+  onMarkWaterChange,
+  onUpdateCareInterval,
+  onAddCareNote,
+  onDeleteCareNote
 }) {
   const [now, setNow] = useState(() => new Date())
 
@@ -139,10 +148,26 @@ export function FeederPage({
           schedules={schedules}
           telemetry={telemetry}
           triggerHaptic={triggerHaptic}
+          liveHopperGrams={hopperStock?.currentGrams}
         />
       </div>
 
-      {/* 4. Two Stacked Sections: Schedule Manager & Feeding Logs */}
+      {/* 4. Pelacak Stok Pelet & Pengingat Ganti Air / Catatan Perawatan */}
+      <AquariumCareCard
+        hopperStock={hopperStock}
+        onRefillHopper={onRefillHopper}
+        onUpdateHopperCapacity={onUpdateHopperCapacity}
+        aquariumCare={aquariumCare}
+        onMarkWaterChange={onMarkWaterChange}
+        onUpdateCareInterval={onUpdateCareInterval}
+        onAddCareNote={onAddCareNote}
+        onDeleteCareNote={onDeleteCareNote}
+        schedules={schedules}
+        vacationMode={vacationMode}
+        triggerHaptic={triggerHaptic}
+      />
+
+      {/* 5. Two Stacked Sections: Schedule Manager & Feeding Logs */}
       <div className="feeder-content-grid">
         <div className="feeder-schedule-col">
           <ScheduleManager

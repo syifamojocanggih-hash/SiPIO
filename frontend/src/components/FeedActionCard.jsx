@@ -177,7 +177,7 @@ export function FeedActionCard({
             )}
 
             {feedingState === 'sending' && (
-              <span>Mengirim perintah ke ESP8266...</span>
+              <span>Mengirim perintah ke dispenser...</span>
             )}
 
             {feedingState === 'active' && (

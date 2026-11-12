@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Settings,
   Sliders,
@@ -10,7 +10,9 @@ import {
   Contrast,
   Wifi,
   CheckCircle2,
-  Database
+  Database,
+  Bell,
+  Volume2
 } from 'lucide-react'
 
 export function SettingsPage({
@@ -25,10 +27,19 @@ export function SettingsPage({
   backendConnection,
   onResetCooldown,
   onResetData,
-  triggerHaptic
+  triggerHaptic,
+  alertPrefs,
+  notifPermission,
+  onToggleBrowserNotif,
+  onToggleSoundAlert,
+  onTestAlertNotification
 }) {
   const [formData, setFormData] = useState({ ...thresholds })
   const [saveSuccess, setSaveSuccess] = useState(false)
+
+  useEffect(() => {
+    setFormData({ ...thresholds })
+  }, [thresholds])
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({
@@ -57,11 +68,11 @@ export function SettingsPage({
             <h1 className="page-title">Konfigurasi Sistem SiPIO</h1>
             <span className="page-status-badge">
               <span className="pulse-indicator" />
-              SiPIO v1.3
+              Akuarium Indoor
             </span>
           </div>
           <p className="page-subtitle">
-            Konfigurasi ambang batas alarm suhu kolam, durasi servo dispenser, preferensi tema, dan integrasi hardware
+            Konfigurasi ambang batas alarm suhu air, durasi dispenser pakan, notifikasi darurat, serta preferensi tema
           </p>
         </div>
 
@@ -176,12 +187,88 @@ export function SettingsPage({
                 />
                 <span className="input-suffix">ms</span>
               </div>
-              <span className="form-help-text">2000 ms ≈ setara 20 gram pelet pakan apung</span>
+              <span className="form-help-text">2000 ms setara dengan estimasi ~5 gram pelet akuarium</span>
             </div>
           </div>
         </div>
 
-        {/* Section 3: Preferensi Tema & Tampilan */}
+        {/* Section 3: Notifikasi Browser & Alarm Suara */}
+        <div className="card settings-card">
+          <div className="card-header">
+            <div>
+              <h2 className="card-title">
+                <Bell size={18} className="text-cyan" />
+                Notifikasi Sistem &amp; Alarm Suara
+              </h2>
+              <p className="card-subtitle">
+                Peringatan otomatis di layar perangkat &amp; nada suara pelan saat suhu di luar batas aman atau air surut
+              </p>
+            </div>
+          </div>
+
+          <div className="theme-toggle-row">
+            <div className="theme-toggle-info">
+              <span className="theme-current-label">
+                Notifikasi Popup Browser:{' '}
+                <strong>
+                  {notifPermission === 'unsupported'
+                    ? 'Tidak Didukung Browser'
+                    : notifPermission === 'denied'
+                    ? 'Izin Diblokir'
+                    : alertPrefs?.browserNotif
+                    ? 'Aktif'
+                    : 'Nonaktif'}
+                </strong>
+              </span>
+              <p className="theme-current-desc">
+                Munculkan popup peringatan pada desktop/HP selama tab SiPIO terbuka saat kondisi akuarium tidak aman.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="theme-switch-btn"
+              onClick={onToggleBrowserNotif}
+              disabled={notifPermission === 'unsupported'}
+            >
+              <Bell size={18} />
+              <span>{alertPrefs?.browserNotif ? 'Matikan Popup' : 'Aktifkan Popup'}</span>
+            </button>
+          </div>
+
+          <div className="theme-toggle-row" style={{ marginTop: '12px' }}>
+            <div className="theme-toggle-info">
+              <span className="theme-current-label">
+                Alarm Suara Peringatan: <strong>{alertPrefs?.soundAlert ? 'Aktif (Bunyi Pelan)' : 'Senyap'}</strong>
+              </span>
+              <p className="theme-current-desc">
+                Putar nada pengingat singkat saat level air rendah atau suhu air terlalu dingin/panas.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="theme-switch-btn"
+              onClick={onToggleSoundAlert}
+            >
+              <Volume2 size={18} />
+              <span>{alertPrefs?.soundAlert ? 'Matikan Suara' : 'Aktifkan Suara'}</span>
+            </button>
+          </div>
+
+          <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              className="camera-btn"
+              onClick={onTestAlertNotification}
+            >
+              <Volume2 size={15} />
+              <span>Uji Notifikasi &amp; Bunyi Alarm</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Section 4: Preferensi Tema & Tampilan */}
         <div className="card settings-card">
           <div className="card-header">
             <div>
@@ -246,15 +333,15 @@ export function SettingsPage({
           </div>
         </div>
 
-        {/* Section 4: Konektivitas Hardware & IoT */}
+        {/* Section 5: Konektivitas Hardware & IoT */}
         <div className="card settings-card">
           <div className="card-header">
             <div>
               <h2 className="card-title">
                 <Wifi size={18} className="text-cyan" />
-                Integrasi Jaringan & Perangkat IoT
+                Integrasi Jaringan &amp; Perangkat Akuarium
               </h2>
-              <p className="card-subtitle">Status kanal komunikasi ESP8266, ESP32-CAM, dan FastAPI</p>
+              <p className="card-subtitle">Status kanal komunikasi perangkat dispenser, kamera, dan server backend</p>
             </div>
           </div>
 
@@ -271,7 +358,7 @@ export function SettingsPage({
 
             <div className="hw-row">
               <div className="hw-info">
-                <strong>ESP8266 Feeder Microcontroller</strong>
+                <strong>Modul Dispenser Pakan</strong>
                 <span>Sinyal Wi-Fi: {espStatus.online ? `${espStatus.rssi} dBm` : 'Offline'}</span>
               </div>
               <span className={`status-tag ${espStatus.online ? 'success' : 'danger'}`}>
@@ -281,8 +368,8 @@ export function SettingsPage({
 
             <div className="hw-row">
               <div className="hw-info">
-                <strong>ESP32-CAM Video Streamer</strong>
-                <span>Alamat Stream: /camera/pond_latest.jpg</span>
+                <strong>Kamera Pemantau Akuarium</strong>
+                <span>Alamat Snapshot: /camera/pond_latest.jpg</span>
               </div>
               <span className={`status-tag ${camStatus.online ? 'success' : 'danger'}`}>
                 {camStatus.online ? 'Aktif' : 'Mati'}
@@ -291,7 +378,7 @@ export function SettingsPage({
           </div>
         </div>
 
-        {/* Section 5: Pemeliharaan Data & Kalibrasi */}
+        {/* Section 6: Pemeliharaan Data & Kalibrasi */}
         <div className="card settings-card">
           <div className="card-header">
             <div>

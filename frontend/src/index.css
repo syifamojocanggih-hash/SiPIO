@@ -100,14 +100,14 @@
 }
 
 [data-theme='dark'] {
-  --bg-base: #0b1324;
-  --bg-surface: #111d35;
-  --bg-card: #152442;
-  --bg-card-hover: #1c3056;
-  --bg-card-subtle: #192a4a;
+  --bg-base: #090e1c;
+  --bg-surface: #0e1529;
+  --bg-card: #121b33;
+  --bg-card-hover: #182545;
+  --bg-card-subtle: #16213d;
 
-  --border-color: #263c63;
-  --border-strong: #3b578c;
+  --border-color: rgba(148, 163, 184, 0.18);
+  --border-strong: rgba(148, 163, 184, 0.35);
   --border-highlight: #38bdf8;
 
   --text-main: #f8fafc;
@@ -115,27 +115,27 @@
   --text-dim: #94a3b8;
 
   --accent-primary: #0284c7;
-  --accent-primary-hover: #38bdf8;
+  --accent-primary-hover: #0369a1;
   --accent-cyan: #38bdf8;
   --accent-teal: #14b8a6;
-  --accent-blue-soft: rgba(56, 189, 248, 0.15);
-  --accent-blue-border: rgba(56, 189, 248, 0.35);
+  --accent-blue-soft: rgba(56, 189, 248, 0.14);
+  --accent-blue-border: rgba(56, 189, 248, 0.32);
 
   --status-emerald: #10b981;
-  --status-emerald-bg: rgba(16, 185, 129, 0.15);
-  --status-emerald-border: rgba(16, 185, 129, 0.35);
+  --status-emerald-bg: rgba(16, 185, 129, 0.14);
+  --status-emerald-border: rgba(16, 185, 129, 0.32);
 
   --status-amber: #f59e0b;
-  --status-amber-bg: rgba(245, 158, 11, 0.15);
-  --status-amber-border: rgba(245, 158, 11, 0.35);
+  --status-amber-bg: rgba(245, 158, 11, 0.14);
+  --status-amber-border: rgba(245, 158, 11, 0.32);
 
   --status-rose: #f43f5e;
-  --status-rose-bg: rgba(244, 63, 94, 0.15);
-  --status-rose-border: rgba(244, 63, 94, 0.35);
+  --status-rose-bg: rgba(244, 63, 94, 0.14);
+  --status-rose-border: rgba(244, 63, 94, 0.32);
 
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.25);
-  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.4);
-  --shadow-elevated: 0 12px 32px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.42);
+  --shadow-elevated: 0 14px 36px rgba(0, 0, 0, 0.65);
 }
 
 /* High Contrast Mode Tokens (Outdoor Sunlight Readability & WCAG AAA) */
@@ -224,7 +224,7 @@ a:focus-visible {
 
 /* Typography Utility Classes */
 .text-cyan {
-  color: var(--accent-primary);
+  color: var(--accent-cyan);
 }
 
 .text-emerald {
@@ -1398,8 +1398,8 @@ a:focus-visible {
 
 .filter-chip.active {
   background-color: var(--accent-blue-soft);
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
   font-weight: 700;
 }
 
@@ -1412,7 +1412,8 @@ a:focus-visible {
 .chart-legend {
   display: flex;
   align-items: center;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 12px 16px;
   font-size: 0.75rem;
   color: var(--text-muted);
 }
@@ -3604,6 +3605,1407 @@ input:checked + .slider:before {
 .vacation-banner-btn:hover {
   opacity: 0.9;
 }
+
+/* ========================================================
+   Overview Aquarium Hub (Gradient Seamless Layout)
+   ======================================================== */
+.hub-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.hub-topbar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hub-greeting-title {
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--text-main);
+  line-height: 1.15;
+}
+
+.hub-greeting-subtitle {
+  font-size: 0.86rem;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.hub-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hub-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-card-subtle) 100%);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.hub-hardware-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-card-subtle) 100%);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.hub-hardware-pill:hover {
+  border-color: var(--border-highlight);
+  transform: translateY(-1px);
+}
+
+/* Main Asymmetric Split Layout: Kiri (Cam + Tren), Kanan (Suhu, Level Air, Pakan) */
+.overview-hub-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .overview-hub-grid {
+    grid-template-columns: minmax(0, 1.8fr) minmax(305px, 0.95fr);
+    gap: 26px;
+  }
+}
+
+.overview-hub-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: 24px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(241, 245, 249, 0.45) 65%,
+    rgba(248, 250, 252, 0) 100%
+  );
+}
+
+[data-theme='dark'] .overview-hub-left {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(16, 23, 44, 0.65) 55%,
+    rgba(9, 14, 28, 0.2) 100%
+  );
+}
+
+/* Hero Cam Kolam: Tanpa kotak kaku, gradasi halus ke bawah */
+.hub-camera-hero {
+  position: relative;
+  width: 100%;
+  border-radius: 24px 24px 0 0;
+  overflow: hidden;
+  border: none;
+}
+
+.hub-camera-media-wrap {
+  position: relative;
+  width: 100%;
+  height: 335px;
+  background-color: #0b1324;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .hub-camera-media-wrap {
+    height: 395px;
+  }
+}
+
+.hub-camera-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hub-camera-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(180deg, #131c36 0%, var(--bg-base) 100%);
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 24px;
+  text-align: center;
+}
+
+/* Multi-stop vertical gradient fade (Light Mode) */
+.hub-camera-fade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(15, 23, 42, 0.24) 0%,
+    rgba(248, 250, 252, 0.08) 34%,
+    rgba(248, 250, 252, 0.92) 67%,
+    var(--bg-base) 92%
+  );
+}
+
+[data-contrast='high'][data-theme='light'] .hub-camera-fade {
+  background: linear-gradient(
+    to bottom,
+    rgba(15, 23, 42, 0.28) 0%,
+    rgba(255, 255, 255, 0.14) 32%,
+    rgba(255, 255, 255, 0.96) 64%,
+    #ffffff 88%
+  );
+}
+
+/* Multi-stop vertical gradient fade (Dark Mode Midnight Navy) */
+[data-theme='dark'] .hub-camera-fade {
+  background: linear-gradient(
+    to bottom,
+    rgba(9, 14, 28, 0.32) 0%,
+    rgba(9, 14, 28, 0.1) 34%,
+    rgba(9, 14, 28, 0.9) 67%,
+    var(--bg-base) 92%
+  );
+}
+
+[data-contrast='high'][data-theme='dark'] .hub-camera-fade {
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.35) 0%,
+    rgba(0, 0, 0, 0.14) 32%,
+    rgba(0, 0, 0, 0.94) 64%,
+    #000000 88%
+  );
+}
+
+/* Floating Camera Top Controls */
+.hub-camera-top-bar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  z-index: 3;
+}
+
+.hub-cam-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  background: rgba(9, 14, 28, 0.68);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f8fafc;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.hub-cam-time {
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.hub-cam-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hub-cam-switcher {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border-radius: var(--radius-full);
+  background: rgba(9, 14, 28, 0.68);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.hub-cam-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  border: none;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.hub-cam-tab:hover {
+  color: #ffffff;
+}
+
+.hub-cam-tab.active {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+.hub-cam-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: var(--radius-full);
+  background: rgba(9, 14, 28, 0.68);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f8fafc;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.hub-cam-icon-btn:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.9);
+  transform: translateY(-1px);
+}
+
+.hub-cam-icon-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+@media (max-width: 768px) {
+  .hub-cam-tab,
+  .hub-cam-icon-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Bottom Hero Overlaid Title & Chips on Dissolved Fade Area */
+.hub-camera-bottom-content {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20px 22px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 2;
+}
+
+.hub-camera-title-group {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hub-camera-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--text-main);
+  line-height: 1.15;
+}
+
+.hub-camera-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hub-inline-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme='dark'] .hub-inline-chip {
+  background-color: rgba(17, 25, 48, 0.85);
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+/* Seamless Tren Suhu Panel directly beneath Camera */
+.hub-temp-wrapper {
+  width: 100%;
+}
+
+.hub-temp-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px 22px 24px;
+  border-radius: 0 0 24px 24px;
+  background: linear-gradient(
+    180deg,
+    var(--bg-base) 0%,
+    rgba(255, 255, 255, 0.72) 45%,
+    rgba(241, 245, 249, 0.15) 100%
+  );
+  border-top: none;
+}
+
+.hub-temp-panel .card-header {
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+[data-theme='dark'] .hub-temp-panel {
+  background: linear-gradient(
+    180deg,
+    var(--bg-base) 0%,
+    rgba(16, 23, 44, 0.65) 50%,
+    rgba(9, 14, 28, 0.15) 100%
+  );
+  border-top: none;
+}
+
+[data-contrast='high'] .hub-temp-panel {
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.temp-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hub-text-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  background-color: var(--accent-blue-soft);
+  border: 1px solid var(--accent-blue-border);
+  color: var(--accent-cyan);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+[data-theme='light'] .hub-text-link-btn {
+  color: var(--accent-primary);
+}
+
+.hub-text-link-btn:hover {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #ffffff;
+}
+
+.chart-empty-state {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Right Telemetry Rail (Suhu Air, Level Air, Pakan Terakhir) */
+.overview-hub-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.hub-rail-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 22px;
+  background: linear-gradient(
+    180deg,
+    var(--bg-card) 0%,
+    rgba(241, 245, 249, 0.62) 100%
+  );
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+[data-theme='dark'] .hub-rail-card {
+  background: linear-gradient(
+    180deg,
+    rgba(19, 28, 54, 0.92) 0%,
+    rgba(11, 17, 34, 0.62) 100%
+  );
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+[data-contrast='high'] .hub-rail-card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-color);
+}
+
+.hub-rail-card:hover {
+  border-color: var(--border-highlight);
+}
+
+.hub-rail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hub-rail-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.25;
+}
+
+.hub-rail-subtitle {
+  font-size: 0.74rem;
+  color: var(--text-dim);
+  display: block;
+  margin-top: 2px;
+}
+
+/* Card 1: Circular Arc Gauge */
+.hub-arc-gauge-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 2px 0;
+}
+
+.hub-arc-svg {
+  width: 100%;
+  max-width: 215px;
+  height: auto;
+  overflow: visible;
+}
+
+.hub-gauge-num {
+  font-size: 2.15rem;
+  font-weight: 800;
+  fill: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-gauge-sub {
+  font-size: 0.72rem;
+  font-weight: 600;
+  fill: var(--text-dim);
+}
+
+/* Card 2: Vertical Water Level Scale */
+.hub-level-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hub-level-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hub-level-val {
+  font-size: 1.85rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.hub-level-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.hub-level-svg {
+  width: 96px;
+  height: 88px;
+  flex-shrink: 0;
+}
+
+.hub-wave-level-group {
+  transition: transform 550ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hub-wave-front {
+  animation: waterWaveSlide 4.2s linear infinite;
+}
+
+.hub-wave-back {
+  animation: waterWaveSlide 6.4s linear infinite reverse;
+}
+
+.hub-wave-buoy {
+  transition: cy 550ms cubic-bezier(0.4, 0, 0.2, 1), fill 300ms ease;
+}
+
+@keyframes waterWaveSlide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-92px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hub-wave-front,
+  .hub-wave-back {
+    animation: none;
+  }
+}
+
+/* Card 3: Last Feed & Gradient Quick Action */
+.hub-feed-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hub-feed-time-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hub-feed-time {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.hub-feed-rel {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent-cyan);
+}
+
+[data-theme='light'] .hub-feed-rel {
+  color: var(--accent-primary);
+}
+
+.hub-feed-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: var(--text-dim);
+}
+
+.hub-feed-action-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.hub-feed-pill-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
+}
+
+.hub-feed-pill-btn.ready {
+  background: linear-gradient(90deg, #0284c7 0%, #0ea5e9 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.28);
+}
+
+.hub-feed-pill-btn.ready:hover:not(:disabled) {
+  transform: translateY(-1px);
+  opacity: 0.94;
+}
+
+.hub-feed-pill-btn.blocked {
+  background-color: var(--status-rose-bg);
+  border: 1px solid var(--status-rose-border);
+  color: var(--status-rose);
+  cursor: not-allowed;
+}
+
+.hub-cooldown-pill {
+  position: relative;
+  flex: 1;
+  min-height: 44px;
+  border-radius: 12px;
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hub-cooldown-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, rgba(2, 132, 199, 0.22) 0%, rgba(16, 185, 129, 0.28) 100%);
+  transition: width 600ms linear;
+}
+
+.hub-cooldown-content {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-rail-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  font-size: 0.76rem;
+}
+
+.hub-rail-meta {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.hub-rail-meta strong {
+  color: var(--text-main);
+}
+
+.hub-rail-action-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: none;
+  border: 1px solid transparent;
+  color: var(--accent-cyan);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+[data-theme='light'] .hub-rail-action-link {
+  color: var(--accent-primary);
+}
+
+.hub-rail-action-link:hover {
+  background-color: var(--accent-blue-soft);
+  border-color: var(--accent-blue-border);
+}
+
+/* Fullscreen Modal Camera Image */
+.hub-fullscreen-img-wrap {
+  margin-top: 12px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background-color: #090e1c;
+}
+
+.hub-fullscreen-img {
+  width: 100%;
+  max-height: 75vh;
+  object-fit: contain;
+  display: block;
+}
+
+/* ========================================================
+   TempPage: Profil Ikan Hias Akuarium (Interaktif 1-Klik)
+   ======================================================== */
+.fish-preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fish-preset-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.fish-preset-row.active {
+  border-color: var(--status-emerald);
+  background-color: var(--status-emerald-bg);
+}
+
+.fish-preset-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.fish-preset-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fish-preset-title strong {
+  font-size: 0.86rem;
+  color: var(--text-main);
+}
+
+.fish-preset-range {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+[data-theme='light'] .fish-preset-range {
+  color: var(--accent-primary);
+}
+
+.fish-preset-note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.fish-preset-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 44px;
+  min-width: 92px;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.fish-preset-btn:hover:not(:disabled) {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #ffffff;
+}
+
+.fish-preset-btn.active {
+  background-color: var(--status-emerald);
+  border-color: var(--status-emerald);
+  color: #ffffff;
+  cursor: default;
+}
+
+/* ========================================================
+   FeederPage: Stok Pelet & Perawatan Akuarium
+   ======================================================== */
+.care-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 1024px) {
+  .care-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.care-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hopper-stock-hero {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hopper-stock-numbers {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.hopper-grams-big {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1;
+}
+
+.hopper-grams-cap {
+  font-size: 0.86rem;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.hopper-days-est {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.hopper-progress-track {
+  width: 100%;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.hopper-progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 350ms ease;
+}
+
+.hopper-progress-fill.ok {
+  background: linear-gradient(90deg, #0284c7 0%, #10b981 100%);
+}
+
+.hopper-progress-fill.low {
+  background: linear-gradient(90deg, #f59e0b 0%, #f43f5e 100%);
+}
+
+.hopper-low-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background-color: var(--status-amber-bg);
+  border: 1px solid var(--status-amber-border);
+  color: var(--status-amber);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.hopper-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.hopper-capacity-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hopper-cap-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.hopper-refill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.care-meta-footnote {
+  font-size: 0.74rem;
+  color: var(--text-dim);
+}
+
+/* Water Change Status Banner */
+.wc-status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card-subtle);
+}
+
+.wc-status-banner.success {
+  background-color: var(--status-emerald-bg);
+  border-color: var(--status-emerald-border);
+}
+
+.wc-status-banner.warning {
+  background-color: var(--status-amber-bg);
+  border-color: var(--status-amber-border);
+}
+
+.wc-status-banner.danger {
+  background-color: var(--status-rose-bg);
+  border-color: var(--status-rose-border);
+}
+
+.wc-status-text strong {
+  display: block;
+  font-size: 0.96rem;
+  color: var(--text-main);
+}
+
+.wc-status-text p {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.wc-mark-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  background-color: var(--status-emerald);
+  color: #ffffff;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.wc-mark-btn:hover {
+  opacity: 0.92;
+}
+
+/* Care Notes Diary */
+.care-note-form {
+  width: 100%;
+}
+
+.care-note-inputs {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.care-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.care-notes-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card-subtle);
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+
+.care-note-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+}
+
+.care-note-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.care-note-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background-color: var(--accent-blue-soft);
+  border: 1px solid var(--accent-blue-border);
+  color: var(--accent-cyan);
+  white-space: nowrap;
+}
+
+[data-theme='light'] .care-note-badge {
+  color: var(--accent-primary);
+}
+
+.care-note-desc {
+  font-size: 0.8rem;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.care-note-date {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ========================================================
+   CameraPage & CameraMonitor Upgrades
+   ======================================================== */
+.camera-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cam-auto-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cam-countdown-pill {
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background-color: var(--accent-blue-soft);
+  border: 1px solid var(--accent-blue-border);
+  color: var(--accent-cyan);
+}
+
+[data-theme='light'] .cam-countdown-pill {
+  color: var(--accent-primary);
+}
+
+.camera-btn.flash-active {
+  background-color: var(--status-amber-bg);
+  border-color: var(--status-amber-border);
+  color: var(--status-amber);
+}
+
+.cam-back-live-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  background-color: var(--accent-primary);
+  color: #ffffff;
+  border: none;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.camera-bar-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cam-time-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+/* Strip Galeri Riwayat Tangkapan */
+.cam-history-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.cam-history-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.cam-history-empty {
+  font-size: 0.76rem;
+  color: var(--text-dim);
+}
+
+.cam-thumb-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.cam-thumb-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card-subtle);
+  border: 1.5px solid var(--border-color);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.cam-thumb-card:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.cam-thumb-card.selected {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-blue-soft);
+}
+
+.cam-thumb-img {
+  width: 100%;
+  height: 76px;
+  object-fit: cover;
+  display: block;
+}
+
+.cam-thumb-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+}
+
+.cam-thumb-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.cam-thumb-time {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+}
+
+/* CameraPage Interactive Observation Right Card */
+.cam-mini-telemetry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cam-mini-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.cam-mini-pill strong {
+  color: var(--text-main);
+}
+
+.cam-feed-watch-box {
+  width: 100%;
+}
+
+.btn-feed-watch {
+  width: 100%;
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  background-color: var(--accent-primary);
+  color: #ffffff;
+  border: none;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.btn-feed-watch:hover:not(:disabled) {
+  background-color: var(--accent-primary-hover);
+}
+
+.btn-feed-watch.disabled,
+.btn-feed-watch:disabled {
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-dim);
+  cursor: not-allowed;
+}
+
+.cam-watch-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background-color: var(--accent-blue-soft);
+  border: 1px solid var(--accent-blue-border);
+  color: var(--text-main);
+  font-size: 0.82rem;
+}
+
+.cam-quick-obs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cam-obs-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.cam-obs-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cam-obs-btn {
+  min-height: 44px;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cam-obs-btn:hover {
+  border-color: var(--accent-primary);
+  background-color: var(--accent-blue-soft);
+  color: var(--accent-cyan);
+}
+
+[data-theme='light'] .cam-obs-btn:hover {
+  color: var(--accent-primary);
+}
+
+
 
 
 

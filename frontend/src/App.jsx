@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { DesktopSidebar } from './components/DesktopSidebar'
 import { MobileBottomNav } from './components/MobileBottomNav'
 import { PWAInstallModal } from './components/PWAInstallModal'
@@ -18,7 +18,13 @@ import {
   INITIAL_TEMP_HISTORY
 } from './data/mockIoT'
 
-import { parseFeedLogTimestamp, sortSchedulesByTime } from './utils/formatters'
+import { parseFeedLogTimestamp, sortSchedulesByTime, durationToGrams } from './utils/formatters'
+import {
+  playAlertSound,
+  isBrowserNotificationSupported,
+  requestBrowserNotificationPermission,
+  sendBrowserNotification
+} from './utils/notifications'
 
 export default function App() {
   // Theme state: 'light' by default for optimal outdoor sunlight readability (SiPIO White & Blue)
@@ -50,8 +56,21 @@ export default function App() {
   // Telemetry (PRD Section 11 & 13)
   const [telemetry, setTelemetry] = useState(INITIAL_TELEMETRY)
 
-  // System Thresholds (PRD Section 13.1)
-  const [thresholds, setThresholds] = useState(INITIAL_THRESHOLDS)
+  // System Thresholds (PRD Section 13.1) with localStorage caching
+  const [thresholds, setThresholds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sipio_thresholds')
+      return saved ? JSON.parse(saved) : INITIAL_THRESHOLDS
+    } catch {
+      return INITIAL_THRESHOLDS
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sipio_thresholds', JSON.stringify(thresholds))
+    } catch {}
+  }, [thresholds])
 
   // Schedules (PRD Section 13 & D-04) with localStorage caching, sorted chronologically
   const [schedules, setSchedules] = useState(() => {
@@ -126,7 +145,86 @@ export default function App() {
     } catch {}
   }, [vacationMode])
 
-  // Real-time camera snapshot updates from ESP32-CAM
+  // Pelacak Stok Pelet Harian (Hopper Stock)
+  const [hopperStock, setHopperStock] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sipio_hopper_stock')
+      return saved ? JSON.parse(saved) : {
+        currentGrams: 120,
+        capacityGrams: 200,
+        lastRefillAt: null
+      }
+    } catch {
+      return { currentGrams: 120, capacityGrams: 200, lastRefillAt: null }
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sipio_hopper_stock', JSON.stringify(hopperStock))
+    } catch {}
+  }, [hopperStock])
+
+  // Pelacak Ganti Air & Buku Catatan Perawatan Akuarium
+  const [aquariumCare, setAquariumCare] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sipio_aquarium_care')
+      return saved ? JSON.parse(saved) : {
+        intervalDays: 7,
+        lastWaterChangeAt: null,
+        notes: []
+      }
+    } catch {
+      return { intervalDays: 7, lastWaterChangeAt: null, notes: [] }
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sipio_aquarium_care', JSON.stringify(aquariumCare))
+    } catch {}
+  }, [aquariumCare])
+
+  // Riwayat Galeri Snapshot Kamera (Hanya diisi dari tangkapan nyata)
+  const [snapshotHistory, setSnapshotHistory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sipio_snapshots')
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sipio_snapshots', JSON.stringify(snapshotHistory))
+    } catch {}
+  }, [snapshotHistory])
+
+  // Preferensi Notifikasi Browser & Alarm Suara
+  const [alertPrefs, setAlertPrefs] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sipio_alert_prefs')
+      return saved ? JSON.parse(saved) : { browserNotif: false, soundAlert: false }
+    } catch {
+      return { browserNotif: false, soundAlert: false }
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sipio_alert_prefs', JSON.stringify(alertPrefs))
+    } catch {}
+  }, [alertPrefs])
+
+  const [notifPermission, setNotifPermission] = useState(() => {
+    if (!isBrowserNotificationSupported()) return 'unsupported'
+    return Notification.permission
+  })
+
+  const lastNotifiedRef = useRef({})
+
+  // Real-time camera snapshot updates from camera stream/upload
   const [cameraUpdate, setCameraUpdate] = useState(null)
 
   // Real-time FastAPI WebSocket & MQTT Bridge Connection
@@ -162,6 +260,159 @@ export default function App() {
     pwaState.triggerHaptic(40)
   }, [pwaState])
 
+  const processedFeedIdsRef = useRef(new Set())
+
+  const consumeHopperGrams = useCallback((durationMs, feedId) => {
+    if (feedId && processedFeedIdsRef.current.has(feedId)) return
+    if (feedId) processedFeedIdsRef.current.add(feedId)
+    const gramsUsed = durationToGrams(durationMs)
+    setHopperStock((prev) => {
+      const nextGrams = Math.max(0, (Number(prev.currentGrams) || 0) - gramsUsed)
+      return { ...prev, currentGrams: nextGrams }
+    })
+  }, [])
+
+  const handleCaptureSnapshot = useCallback((snap) => {
+    setSnapshotHistory((prev) => {
+      const entry = {
+        id: snap.id || `${snap.area}-${snap.timestamp || Date.now()}`,
+        area: snap.area || 'kolam',
+        src: snap.src,
+        label: snap.label || 'Snapshot',
+        timestamp: snap.timestamp || Date.now()
+      }
+      return [entry, ...prev].slice(0, 8)
+    })
+  }, [])
+
+  const handleSaveThresholds = useCallback(async (newThresholds) => {
+    setThresholds(newThresholds)
+    try {
+      localStorage.setItem('sipio_thresholds', JSON.stringify(newThresholds))
+    } catch {}
+    if (iotConnection?.backendOnline) {
+      try {
+        await api.updateThresholds(newThresholds)
+      } catch (err) {
+        console.warn('[SiPIO] Gagal sinkron ambang batas ke backend:', err)
+      }
+    }
+  }, [iotConnection?.backendOnline])
+
+  const handleRefillHopper = useCallback(() => {
+    const nowTs = Date.now()
+    setHopperStock((prev) => ({
+      ...prev,
+      currentGrams: prev.capacityGrams,
+      lastRefillAt: nowTs
+    }))
+    setAquariumCare((prev) => ({
+      ...prev,
+      notes: [
+        {
+          id: nowTs,
+          category: 'Isi Ulang Pakan',
+          note: 'Wadah pakan hopper diisi penuh kembali',
+          timestamp: nowTs
+        },
+        ...(prev.notes || [])
+      ].slice(0, 20)
+    }))
+  }, [])
+
+  const handleUpdateHopperCapacity = useCallback((newCapacity) => {
+    const cap = Math.max(10, Number(newCapacity) || 200)
+    setHopperStock((prev) => ({
+      ...prev,
+      capacityGrams: cap,
+      currentGrams: Math.min(prev.currentGrams, cap)
+    }))
+  }, [])
+
+  const handleMarkWaterChange = useCallback(() => {
+    const nowTs = Date.now()
+    setAquariumCare((prev) => ({
+      ...prev,
+      lastWaterChangeAt: nowTs,
+      notes: [
+        {
+          id: nowTs,
+          category: 'Ganti Air 30%',
+          note: 'Penggantian air rutin akuarium selesai dilaksanakan',
+          timestamp: nowTs
+        },
+        ...(prev.notes || [])
+      ].slice(0, 20)
+    }))
+  }, [])
+
+  const handleUpdateCareInterval = useCallback((days) => {
+    setAquariumCare((prev) => ({
+      ...prev,
+      intervalDays: Number(days) || 7
+    }))
+  }, [])
+
+  const handleAddCareNote = useCallback(({ category, note }) => {
+    const nowTs = Date.now()
+    setAquariumCare((prev) => ({
+      ...prev,
+      notes: [
+        { id: nowTs, category, note, timestamp: nowTs },
+        ...(prev.notes || [])
+      ].slice(0, 20)
+    }))
+  }, [])
+
+  const handleDeleteCareNote = useCallback((id) => {
+    setAquariumCare((prev) => ({
+      ...prev,
+      notes: (prev.notes || []).filter((n) => n.id !== id)
+    }))
+  }, [])
+
+  const handleToggleBrowserNotif = useCallback(async () => {
+    pwaState.triggerHaptic(30)
+    if (!alertPrefs.browserNotif) {
+      const perm = await requestBrowserNotificationPermission()
+      setNotifPermission(perm)
+      if (perm === 'granted') {
+        setAlertPrefs((prev) => ({ ...prev, browserNotif: true }))
+        sendBrowserNotification('Notifikasi SiPIO Aktif', 'SiPIO akan mengingatkan bila suhu atau level air tidak aman.', 'sipio-perm')
+      } else if (perm === 'denied') {
+        alert('Izin notifikasi ditolak di browser. Silakan izinkan notifikasi untuk situs ini di setelan browser.')
+      }
+    } else {
+      setAlertPrefs((prev) => ({ ...prev, browserNotif: false }))
+    }
+  }, [alertPrefs.browserNotif, pwaState])
+
+  const handleToggleSoundAlert = useCallback(() => {
+    pwaState.triggerHaptic(30)
+    setAlertPrefs((prev) => {
+      const nextVal = !prev.soundAlert
+      if (nextVal) playAlertSound('test')
+      return { ...prev, soundAlert: nextVal }
+    })
+  }, [pwaState])
+
+  const handleTestAlertNotification = useCallback(async () => {
+    pwaState.triggerHaptic(40)
+    playAlertSound('test')
+    let perm = notifPermission
+    if (perm !== 'granted' && isBrowserNotificationSupported()) {
+      perm = await requestBrowserNotificationPermission()
+      setNotifPermission(perm)
+    }
+    if (perm === 'granted') {
+      sendBrowserNotification(
+        'Uji Peringatan Akuarium SiPIO',
+        `Suhu saat ini ${telemetry.temp.toFixed(1)}°C, Level air: ${telemetry.level_ok ? 'Normal' : 'Rendah'}.`,
+        'sipio-test'
+      )
+    }
+  }, [notifPermission, pwaState, telemetry.level_ok, telemetry.temp])
+
   const handleFeedEvent = useCallback((feedEntry) => {
     setFeedLogs((prev) => {
       if (prev.some((p) => p.id === feedEntry.id)) return prev
@@ -173,8 +424,9 @@ export default function App() {
       try {
         localStorage.setItem('sipio_last_feed_time', now.toString())
       } catch {}
+      consumeHopperGrams(feedEntry.duration_ms, feedEntry.id)
     }
-  }, [])
+  }, [consumeHopperGrams])
 
   const handleSchedulesUpdate = useCallback((newSchedules) => {
     if (Array.isArray(newSchedules)) {
@@ -193,7 +445,17 @@ export default function App() {
   const handleCameraUpdate = useCallback((camData) => {
     setCameraUpdate(camData)
     setCamStatus({ online: true })
-  }, [])
+    if (camData?.area) {
+      const ts = camData.timestamp || Date.now()
+      const baseSrc = camData.area === 'hopper' ? '/camera/hopper_latest.jpg' : '/camera/pond_latest.jpg'
+      handleCaptureSnapshot({
+        area: camData.area,
+        src: `${baseSrc}?t=${ts}`,
+        label: 'Live Upload',
+        timestamp: ts
+      })
+    }
+  }, [handleCaptureSnapshot])
 
   const iotConnection = useIoTConnection({
     onTelemetryUpdate: handleTelemetryUpdate,
@@ -476,8 +738,8 @@ export default function App() {
     activeAlerts.push({
       id: 'alert_level_low',
       type: 'danger',
-      title: 'Level Air Kolam Rendah',
-      message: 'Sensor float switch mendeteksi ketinggian air di bawah batas aman. Pemberian pakan otomatis ditunda.'
+      title: 'Level Air Akuarium Rendah',
+      message: 'Ketinggian air terdeteksi di bawah batas aman. Pemberian pakan otomatis ditunda.'
     })
   }
 
@@ -494,10 +756,40 @@ export default function App() {
     activeAlerts.push({
       id: 'alert_esp_offline',
       type: 'danger',
-      title: 'Feeder ESP8266 Tidak Terhubung',
-      message: 'Perangkat tidak mengirim heartbeat telemetri melebihi batas waktu.'
+      title: 'Dispenser Pakan Tidak Terhubung',
+      message: 'Perangkat tidak mengirim sinyal status melebihi batas waktu.'
     })
   }
+
+  if (hopperStock.currentGrams <= Math.max(10, Math.round(hopperStock.capacityGrams * 0.15)) && !dismissedAlertIds.includes('alert_hopper_low')) {
+    activeAlerts.push({
+      id: 'alert_hopper_low',
+      type: 'warning',
+      title: 'Stok Pelet Wadah Hampir Habis',
+      message: `Sisa pakan tinggal ~${hopperStock.currentGrams}g dari kapasitas ${hopperStock.capacityGrams}g. Segera isi ulang wadah feeder.`
+    })
+  }
+
+  // Picu Notifikasi Browser & Alarm Suara (dengan cooldown 5 menit agar tidak mengganggu berulang-ulang)
+  useEffect(() => {
+    if (!alertPrefs.browserNotif && !alertPrefs.soundAlert) return
+    const nowTs = Date.now()
+    const notifyAlerts = activeAlerts.filter((a) => a.id !== 'alert_pwa_offline')
+    if (notifyAlerts.length === 0) return
+
+    const topAlert = notifyAlerts[0]
+    const lastFired = lastNotifiedRef.current[topAlert.id] || 0
+    if (nowTs - lastFired < 5 * 60 * 1000) return
+
+    lastNotifiedRef.current[topAlert.id] = nowTs
+    if (alertPrefs.soundAlert) {
+      playAlertSound(topAlert.type === 'danger' ? 'danger' : 'warning')
+    }
+    if (alertPrefs.browserNotif) {
+      sendBrowserNotification(`SiPIO: ${topAlert.title}`, topAlert.message, topAlert.id)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [telemetry.level_ok, telemetry.temp, espStatus.online, hopperStock.currentGrams, alertPrefs.browserNotif, alertPrefs.soundAlert])
 
   const handleDismissAlert = (id) => {
     setDismissedAlertIds((prev) => [...prev, id])
@@ -534,6 +826,9 @@ export default function App() {
             if (prev.some((p) => p.id === res.log.id)) return prev
             return [res.log, ...prev]
           })
+          if (res.log.result === 'done') {
+            consumeHopperGrams(res.log.duration_ms, res.log.id)
+          }
         }
         return
       } catch (err) {
@@ -555,6 +850,9 @@ export default function App() {
       ...finalFeedEvent
     }
     setFeedLogs((prev) => [newEntry, ...prev])
+    if (newEntry.result === 'done') {
+      consumeHopperGrams(newEntry.duration_ms, newEntry.id)
+    }
   }
 
   // Handler to reset all simulation data back to initial state
@@ -564,12 +862,26 @@ export default function App() {
     setCamStatus({ online: true })
     setThresholds(INITIAL_THRESHOLDS)
     setSchedules(INITIAL_SCHEDULES)
-    try {
-      localStorage.removeItem('sipio_schedules')
-    } catch {}
     setFeedLogs(INITIAL_FEED_LOGS)
+    setHopperStock({ currentGrams: 120, capacityGrams: 200, lastRefillAt: null })
+    setAquariumCare({ intervalDays: 7, lastWaterChangeAt: null, notes: [] })
+    setSnapshotHistory([])
+    setVacationMode({
+      enabled: false,
+      days: 4,
+      returnDate: '',
+      hopperStockGrams: 120,
+      ecoMode: true,
+      waterCheckConfirmed: true
+    })
     try {
+      localStorage.removeItem('sipio_thresholds')
+      localStorage.removeItem('sipio_schedules')
       localStorage.removeItem('sipio_feed_logs')
+      localStorage.removeItem('sipio_hopper_stock')
+      localStorage.removeItem('sipio_aquarium_care')
+      localStorage.removeItem('sipio_snapshots')
+      localStorage.removeItem('sipio_vacation_mode')
     } catch {}
     setTempHistory(INITIAL_TEMP_HISTORY)
     setDismissedAlertIds([])
@@ -610,6 +922,9 @@ export default function App() {
             onTriggerFeed={handleTriggerFeed}
             triggerHaptic={pwaState.triggerHaptic}
             vacationMode={vacationMode}
+            tempHistory={tempHistory}
+            cameraUpdate={cameraUpdate}
+            hopperStock={hopperStock}
           />
         )}
 
@@ -631,6 +946,14 @@ export default function App() {
             triggerHaptic={pwaState.triggerHaptic}
             vacationMode={vacationMode}
             onUpdateVacationMode={setVacationMode}
+            hopperStock={hopperStock}
+            onRefillHopper={handleRefillHopper}
+            onUpdateHopperCapacity={handleUpdateHopperCapacity}
+            aquariumCare={aquariumCare}
+            onMarkWaterChange={handleMarkWaterChange}
+            onUpdateCareInterval={handleUpdateCareInterval}
+            onAddCareNote={handleAddCareNote}
+            onDeleteCareNote={handleDeleteCareNote}
           />
         )}
 
@@ -638,6 +961,15 @@ export default function App() {
           <CameraPage
             camStatus={camStatus}
             cameraUpdate={cameraUpdate}
+            telemetry={telemetry}
+            thresholds={thresholds}
+            lastFeedTimestamp={lastFeedTimestamp}
+            onTriggerFeed={handleTriggerFeed}
+            hopperStock={hopperStock}
+            onRefillHopper={handleRefillHopper}
+            snapshotHistory={snapshotHistory}
+            onCaptureSnapshot={handleCaptureSnapshot}
+            onAddCareNote={handleAddCareNote}
             triggerHaptic={pwaState.triggerHaptic}
           />
         )}
@@ -647,13 +979,14 @@ export default function App() {
             telemetry={telemetry}
             thresholds={thresholds}
             tempHistory={tempHistory}
+            onApplyThresholds={handleSaveThresholds}
           />
         )}
 
         {activeTab === 'settings' && (
           <SettingsPage
             thresholds={thresholds}
-            onSaveThresholds={setThresholds}
+            onSaveThresholds={handleSaveThresholds}
             theme={theme}
             toggleTheme={toggleTheme}
             contrast={contrast}
@@ -664,6 +997,11 @@ export default function App() {
             onResetCooldown={handleResetCooldown}
             onResetData={handleResetData}
             triggerHaptic={pwaState.triggerHaptic}
+            alertPrefs={alertPrefs}
+            notifPermission={notifPermission}
+            onToggleBrowserNotif={handleToggleBrowserNotif}
+            onToggleSoundAlert={handleToggleSoundAlert}
+            onTestAlertNotification={handleTestAlertNotification}
           />
         )}
       </main>
@@ -672,7 +1010,7 @@ export default function App() {
       {isSettingsOpen && (
         <SettingsModal
           thresholds={thresholds}
-          onSave={setThresholds}
+          onSave={handleSaveThresholds}
           onClose={() => setIsSettingsOpen(false)}
           triggerHaptic={pwaState.triggerHaptic}
         />

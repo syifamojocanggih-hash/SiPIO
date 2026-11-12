@@ -48,3 +48,68 @@ export function sortSchedulesByTime(scheds) {
     return toMinutes(a.time) - toMinutes(b.time)
   })
 }
+
+/**
+ * Konversi durasi servo (ms) ke perkiraan gram pelet (~400ms = 1g, 2000ms = 5g)
+ */
+export function durationToGrams(durationMs) {
+  return Math.max(1, Math.round((Number(durationMs) || 2000) / 400))
+}
+
+/**
+ * Format tanggal singkat Bahasa Indonesia (contoh: 12 Nov, 08:20)
+ */
+export function formatShortDateTime(dateInput = Date.now()) {
+  const d = new Date(dateInput)
+  if (isNaN(d.getTime())) return '-'
+  const idMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${d.getDate()} ${idMonths[d.getMonth()]}, ${hh}:${mm}`
+}
+
+/**
+ * Profil batas suhu aman untuk ikan hias akuarium dalam ruangan
+ */
+export const AQUARIUM_FISH_PRESETS = [
+  {
+    id: 'goldfish',
+    name: 'Ikan Koki (Goldfish)',
+    min: 20,
+    max: 24,
+    ideal: '22°C',
+    note: 'Nyaman di air sejuk, cocok tanpa heater di ruangan adem'
+  },
+  {
+    id: 'aquascape',
+    name: 'Tetra, Rasbora & Udang Hias',
+    min: 23,
+    max: 27,
+    ideal: '25°C',
+    note: 'Rentang seimbang untuk tanaman aquascape & ikan kecil'
+  },
+  {
+    id: 'betta',
+    name: 'Cupang (Betta) & Guppy',
+    min: 25,
+    max: 28,
+    ideal: '26.5°C',
+    note: 'Menjaga warna sirip cerah dan nafsu makan stabil'
+  },
+  {
+    id: 'channa',
+    name: 'Channa & Arwana',
+    min: 26,
+    max: 30,
+    ideal: '28°C',
+    note: 'Suhu tropis hangat untuk metabolisme dan agresivitas sehat'
+  },
+  {
+    id: 'discus',
+    name: 'Discus & Tropis Hangat',
+    min: 28,
+    max: 31,
+    ideal: '29.5°C',
+    note: 'Disarankan memakai heater otomatis bila kamar ber-AC'
+  }
+]

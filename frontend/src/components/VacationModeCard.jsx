@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Palmtree, Luggage, CheckCircle2, AlertTriangle, Sparkles, ShieldCheck, Clock, CheckSquare, Square, ArrowRight } from 'lucide-react'
 
 export function VacationModeCard({
@@ -6,15 +6,22 @@ export function VacationModeCard({
   onUpdateVacationMode,
   schedules,
   telemetry,
-  triggerHaptic
+  triggerHaptic,
+  liveHopperGrams
 }) {
   // Local temporary form states when configuring
   const [days, setDays] = useState(vacationMode?.days || 4)
   const [ecoMode, setEcoMode] = useState(vacationMode?.ecoMode ?? true)
-  const [hopperStock, setHopperStock] = useState(vacationMode?.hopperStockGrams || 80)
+  const [hopperStock, setHopperStock] = useState(liveHopperGrams ?? vacationMode?.hopperStockGrams ?? 120)
   const [waterChecked, setWaterChecked] = useState(vacationMode?.waterCheckConfirmed ?? true)
   const [filterChecked, setFilterChecked] = useState(true)
   const [coverChecked, setCoverChecked] = useState(true)
+
+  useEffect(() => {
+    if (liveHopperGrams !== undefined) {
+      setHopperStock(liveHopperGrams)
+    }
+  }, [liveHopperGrams])
 
   // Hitung perkiraan konsumsi harian dari jadwal pakan aktif
   const dailyFeedStats = useMemo(() => {
@@ -156,7 +163,7 @@ export function VacationModeCard({
           <div className="vacation-active-alert">
             <ShieldCheck size={18} className="text-emerald flex-shrink-0" />
             <p>
-              <strong>Mode Liburan Berjalan Lancar:</strong> Jadwal otomatis tetap berjalan mandiri di modul ESP8266 LittleFS. Porsi pakan dikurangi 20% secara otomatis agar air akuarium tetap jernih dan kadar amonia stabil selama Anda tidak ada di rumah.
+              <strong>Mode Liburan Berjalan Lancar:</strong> Jadwal otomatis tetap berjalan mandiri di memori lokal perangkat. Porsi pakan dikurangi 20% secara otomatis agar air akuarium tetap jernih dan kadar amonia stabil selama Anda tidak ada di rumah.
             </p>
           </div>
         </div>
