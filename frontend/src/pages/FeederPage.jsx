@@ -79,8 +79,6 @@ export function FeederPage({
     }
   }, [schedules, now])
 
-  const isWaterLow = !telemetry.level_ok
-
   return (
     <div className="page-view animate-fade-in" id="page-feeder">
       {/* 1. Page Header */}
@@ -100,34 +98,9 @@ export function FeederPage({
             Kontrol servo dispenser pakan secara instan, atur jadwal feeding harian otomatis, dan tinjau riwayat audit log
           </p>
         </div>
-
-        <div className="page-header-stats">
-          <div className="header-stat-chip">
-            <span className="stat-chip-label">Jadwal Hari Ini</span>
-            <span className={`stat-chip-val ${scheduleTodayStats.isAllDone ? 'text-emerald' : 'text-amber'}`}>
-              {scheduleTodayStats.totalToday === 0
-                ? 'Tidak Ada'
-                : scheduleTodayStats.isAllDone
-                ? `Sudah (${scheduleTodayStats.completedToday}/${scheduleTodayStats.totalToday})`
-                : `Belum (${scheduleTodayStats.completedToday}/${scheduleTodayStats.totalToday})`}
-            </span>
-          </div>
-          <div className="header-stat-chip">
-            <span className="stat-chip-label">Level Air</span>
-            <span className={`stat-chip-val ${isWaterLow ? 'text-rose' : 'text-emerald'}`}>
-              {isWaterLow ? 'Rendah (Hold)' : 'Normal (Aman)'}
-            </span>
-          </div>
-          <div className="header-stat-chip">
-            <span className="stat-chip-label">Mode Liburan</span>
-            <span className={`stat-chip-val ${vacationMode?.enabled ? 'text-emerald' : 'text-cyan'}`}>
-              {vacationMode?.enabled ? `${vacationMode.days} Hari (-20%)` : 'Siaga'}
-            </span>
-          </div>
-        </div>
       </div>
 
-      {/* 2. Top Hero: Feed Action Card (Kontrol Manual & Status Cooldown) */}
+      {/* 2. Top Hero: Unified Feeder Card (3/5 Kontrol Manual + 2/5 Status Feeder & Kolam) */}
       <div className="feeder-hero-section">
         <FeedActionCard
           telemetry={telemetry}
@@ -137,6 +110,9 @@ export function FeederPage({
           onTriggerFeed={onTriggerFeed}
           onResetCooldown={onResetCooldown}
           triggerHaptic={triggerHaptic}
+          scheduleTodayStats={scheduleTodayStats}
+          vacationMode={vacationMode}
+          schedules={schedules}
         />
       </div>
 

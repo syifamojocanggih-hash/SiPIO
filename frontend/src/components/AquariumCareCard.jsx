@@ -111,9 +111,6 @@ export function AquariumCareCard({
             </h2>
             <p className="card-subtitle">Berkurang otomatis setiap sesi pemberian pakan dijalankan</p>
           </div>
-          <span className={`status-tag ${isStockLow ? 'warning' : 'success'}`}>
-            {isStockLow ? 'Stok Menipis' : `${stockPercent}% Terisi`}
-          </span>
         </div>
 
         <div className="hopper-stock-hero">

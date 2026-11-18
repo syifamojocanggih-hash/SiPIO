@@ -11,6 +11,7 @@ import {
   Clock
 } from 'lucide-react'
 import { CameraMonitor } from '../components/CameraMonitor'
+import { WaterClarityAnalyzer } from '../components/WaterClarityAnalyzer'
 
 export function CameraPage({
   camStatus,
@@ -152,7 +153,14 @@ export function CameraPage({
         />
       </div>
 
-      {/* 3. Panduan Observasi & Panel Aksi Cepat Kamera */}
+      {/* 3. Analisis Kejernihan Air Kolam (Computer Vision Optik Tanpa AI Berat) */}
+      <WaterClarityAnalyzer
+        onAddCareNote={onAddCareNote}
+        triggerHaptic={triggerHaptic}
+        cameraImageSrc="/camera/pond_latest.jpg"
+      />
+
+      {/* 4. Panduan Observasi & Panel Aksi Cepat Kamera */}
       <div className="camera-guide-grid">
         <div className="card guide-card">
           <div className="guide-card-header">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Sliders, RefreshCw, AlertTriangle, CheckCircle, Wifi, WifiOff, Camera, Droplets, Thermometer, Play } from 'lucide-react'
+import { Sliders, RefreshCw, Wifi, Droplets, Thermometer, Play } from 'lucide-react'
 
 export function SimulationBar({
   telemetry,

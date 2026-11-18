@@ -95,10 +95,8 @@ export function VacationModeCard({
           <div>
             <h2 className="card-title">
               <span>Mode Liburan Akuarium</span>
-              {vacationMode?.enabled ? (
+              {vacationMode?.enabled && (
                 <span className="vacation-badge active">Sedang Aktif</span>
-              ) : (
-                <span className="vacation-badge inactive">Siaga</span>
               )}
             </h2>
             <p className="card-subtitle">
