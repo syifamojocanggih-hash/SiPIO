@@ -50,6 +50,10 @@ export function SettingsPage({
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (formData.temp_min >= formData.temp_max) {
+      alert('Batas bawah suhu harus lebih kecil dari batas atas suhu.')
+      return
+    }
     if (triggerHaptic) triggerHaptic(50)
     onSaveThresholds(formData)
     setSaveSuccess(true)
@@ -178,7 +182,7 @@ export function SettingsPage({
                   id="set_default_duration_ms"
                   type="number"
                   min="500"
-                  max="10000"
+                  max="5000"
                   step="250"
                   className="form-input"
                   value={formData.default_duration_ms}

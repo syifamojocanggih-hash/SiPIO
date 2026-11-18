@@ -109,7 +109,7 @@ export function useIoTConnection({
     } catch {
       setIsConnected(false)
     }
-  }, [onTelemetryUpdate, onFeedEvent, onSchedulesUpdate, onThresholdsUpdate])
+  }, [onTelemetryUpdate, onFeedEvent, onSchedulesUpdate, onThresholdsUpdate, onCameraUpdate])
 
   useEffect(() => {
     isMountedRef.current = true

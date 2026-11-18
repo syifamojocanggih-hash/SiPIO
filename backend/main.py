@@ -90,13 +90,20 @@ class ScheduleCreate(BaseModel):
     duration_ms: int = Field(2000, ge=500, le=5000)
     days: str = Field("Setiap Hari")
 
+class ScheduleUpdate(BaseModel):
+    time: Optional[str] = Field(None, pattern=r"^\d{2}:\d{2}$")
+    duration_ms: Optional[int] = Field(None, ge=500, le=5000)
+    days: Optional[str] = None
+    enabled: Optional[bool] = None
+    synced: Optional[bool] = None
+
 class ThresholdsConfig(BaseModel):
-    temp_min: float = 24.0
-    temp_max: float = 32.0
-    min_gap_min: int = 30
-    default_duration_ms: int = 2000
-    offline_after_s: int = 60
-    camera_interval_s: int = 300
+    temp_min: float = Field(24.0, ge=0.0, le=45.0)
+    temp_max: float = Field(32.0, ge=0.0, le=50.0)
+    min_gap_min: int = Field(30, ge=1, le=1440)
+    default_duration_ms: int = Field(2000, ge=500, le=5000)
+    offline_after_s: int = Field(60, ge=10, le=3600)
+    camera_interval_s: int = Field(300, ge=10, le=86400)
 
 # -------------------------------------------------------------
 # In-Memory State
@@ -105,31 +112,9 @@ current_telemetry = TelemetryData()
 current_thresholds = ThresholdsConfig()
 start_time = time.time()
 mqtt_connected = False
-last_feed_epoch_s: float = 0.0  # Merekam epoch pemberian pakan terakhir untuk validasi jeda 30 menit
-
-schedules_db: List[dict] = [
-    {"id": 1, "time": "07:00", "duration_ms": 2000, "days": "Setiap Hari", "enabled": True, "synced": True},
-    {"id": 2, "time": "16:30", "duration_ms": 2000, "days": "Setiap Hari", "enabled": True, "synced": True}
-]
-
-feed_logs_db: List[dict] = [
-    {
-        "id": 101,
-        "timestamp": "14 Okt 2026 07:00:02",
-        "source": "Jadwal Otomatis (ESP)",
-        "duration_ms": 2000,
-        "result": "done",
-        "reason": "Selesai tepat waktu (deviasi < 30s)"
-    },
-    {
-        "id": 102,
-        "timestamp": "14 Okt 2026 12:15:10",
-        "source": "Manual (Dashboard)",
-        "duration_ms": 2000,
-        "result": "done",
-        "reason": "Diberikan manual via tombol pakan cepat"
-    }
-]
+last_feed_epoch_s: float = 0.0  # Merekam epoch pemberian pakan terakhir untuk validasi jeda antar pakan
+main_event_loop: Optional[asyncio.AbstractEventLoop] = None
+MAX_CAMERA_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MB batas aman unggahan snapshot ESP32-CAM
 
 # -------------------------------------------------------------
 # WebSocket Connection Manager
@@ -163,12 +148,17 @@ class ConnectionManager:
 
 ws_manager = ConnectionManager()
 
+def schedule_ws_broadcast(message: dict):
+    """Menjadwalkan broadcast WebSocket secara thread-safe dari thread MQTT latar belakang."""
+    if main_event_loop and main_event_loop.is_running():
+        asyncio.run_coroutine_threadsafe(ws_manager.broadcast(message), main_event_loop)
+
 # -------------------------------------------------------------
 # MQTT Client Handler
 # -------------------------------------------------------------
-def on_mqtt_connect(client, userdata, flags, rc, properties=None):
+def on_mqtt_connect(client, userdata, flags, reason_code, properties=None):
     global mqtt_connected
-    if rc == 0:
+    if reason_code == 0:
         mqtt_connected = True
         logger.info(f"Terhubung ke broker MQTT ({MQTT_BROKER_HOST}:{MQTT_BROKER_PORT})")
         client.subscribe([
@@ -183,14 +173,15 @@ def on_mqtt_connect(client, userdata, flags, rc, properties=None):
         ])
     else:
         mqtt_connected = False
-        logger.warning(f"Koneksi broker MQTT gagal dengan kode respon: {rc}")
+        logger.warning(f"Koneksi broker MQTT gagal dengan kode respon: {reason_code}")
 
-def on_mqtt_disconnect(client, userdata, rc, properties=None):
+def on_mqtt_disconnect(client, userdata, disconnect_flags, reason_code, properties=None):
     global mqtt_connected
     mqtt_connected = False
-    logger.warning("Terputus dari broker MQTT. Menjalankan fallback simulasi internal.")
+    logger.warning(f"Terputus dari broker MQTT (kode: {reason_code}). Menjalankan fallback simulasi internal.")
 
 def on_mqtt_message(client, userdata, msg):
+    global last_feed_epoch_s
     try:
         topic = msg.topic
         payload_str = msg.payload.decode('utf-8')
@@ -216,6 +207,12 @@ def on_mqtt_message(client, userdata, msg):
             except Exception as db_err:
                 logger.warning(f"Gagal mencatat telemetri MQTT ke database: {db_err}")
 
+            schedule_ws_broadcast({
+                "type": "telemetry",
+                "data": current_telemetry.model_dump(),
+                "mqtt_connected": mqtt_connected
+            })
+
         elif topic in [TOPIC_FEEDER_STATUS, LEGACY_TOPIC_FEEDER_STATUS]:
             current_telemetry.esp_online = (payload_str.lower() == "online")
             try:
@@ -238,13 +235,26 @@ def on_mqtt_message(client, userdata, msg):
                     new_feed = FeedLogModel(
                         device_id="feeder01",
                         timestamp_str=time.strftime("%d %b %Y %H:%M:%S"),
-                        source=payload.get("source", "schedule"),
+                        source=payload.get("source", "Jadwal Otomatis (ESP)"),
                         duration_ms=int(payload.get("duration_ms", 2000)),
                         result="done",
                         reason="Berhasil: Diberikan oleh ESP8266 sesuai jadwal"
                     )
                     db_session.add(new_feed)
                     db_session.commit()
+                    db_session.refresh(new_feed)
+                    last_feed_epoch_s = time.time()
+                    schedule_ws_broadcast({
+                        "type": "feed_event",
+                        "data": {
+                            "id": new_feed.id,
+                            "timestamp": new_feed.timestamp_str,
+                            "source": new_feed.source,
+                            "duration_ms": new_feed.duration_ms,
+                            "result": new_feed.result,
+                            "reason": new_feed.reason
+                        }
+                    })
             except Exception as err:
                 logger.warning(f"Gagal mencatat event/feed: {err}")
 
@@ -263,7 +273,7 @@ def on_mqtt_message(client, userdata, msg):
                         device_id="feeder01",
                         timestamp_str=time.strftime("%d %b %Y %H:%M:%S"),
                         source="Jadwal Otomatis (ESP)",
-                        duration_ms=2000,
+                        duration_ms=int(payload.get("duration_ms", 2000)),
                         result="skipped",
                         reason=reason_text
                     )
@@ -278,6 +288,18 @@ def on_mqtt_message(client, userdata, msg):
                     )
                     db_session.add(new_alert)
                     db_session.commit()
+                    db_session.refresh(new_skip)
+                    schedule_ws_broadcast({
+                        "type": "feed_event",
+                        "data": {
+                            "id": new_skip.id,
+                            "timestamp": new_skip.timestamp_str,
+                            "source": new_skip.source,
+                            "duration_ms": new_skip.duration_ms,
+                            "result": new_skip.result,
+                            "reason": new_skip.reason
+                        }
+                    })
             except Exception as err:
                 logger.warning(f"Gagal mencatat event/skip: {err}")
     except Exception as e:
@@ -335,14 +357,26 @@ async def periodic_telemetry_loop():
 # -------------------------------------------------------------
 # FastAPI Lifespan Context Manager
 # -------------------------------------------------------------
-# FastAPI Lifespan Context Manager
-# -------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 0. Initialize SQLite / MySQL Database Tables
+    global main_event_loop, current_thresholds
+    main_event_loop = asyncio.get_running_loop()
+
+    # 0. Initialize SQLite / MySQL Database Tables & Sync Thresholds
     try:
         init_db()
-        logger.info("Database (SQLite/MySQL) berhasil diinisialisasi.")
+        with SessionLocal() as db_session:
+            saved_th = db_session.query(ThresholdModel).filter_by(id=1).first()
+            if saved_th:
+                current_thresholds = ThresholdsConfig(
+                    temp_min=saved_th.temp_min,
+                    temp_max=saved_th.temp_max,
+                    min_gap_min=saved_th.min_gap_min,
+                    default_duration_ms=saved_th.default_duration_ms,
+                    offline_after_s=saved_th.offline_after_s,
+                    camera_interval_s=saved_th.camera_interval_s
+                )
+        logger.info("Database (SQLite/MySQL) berhasil diinisialisasi dan thresholds tersinkron.")
     except Exception as e:
         logger.error(f"Gagal inisialisasi database: {e}")
 
@@ -362,6 +396,7 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     telemetry_task.cancel()
+    main_event_loop = None
     try:
         mqtt_client.loop_stop()
         mqtt_client.disconnect()
@@ -379,11 +414,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Middleware (mendukung Vite dev http://localhost:5173 dan preview http://localhost:4173)
+# CORS Middleware (mendukung Vite dev http://localhost:5173, preview http://localhost:4173, dan akses LAN)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -615,7 +650,7 @@ async def trigger_feeding(req: FeedRequest, db: Session = Depends(get_db)):
             source=req.source,
             duration_ms=req.duration_ms,
             result="skipped",
-            reason=f"Ditolak: Jeda 30 menit antar pakan belum terpenuhi ({rem_min}m {rem_s}s tersisa)"
+            reason=f"Ditolak: Jeda {current_thresholds.min_gap_min} menit antar pakan belum terpenuhi ({rem_min}m {rem_s}s tersisa)"
         )
         db.add(skipped_log)
         db.commit()
@@ -721,8 +756,9 @@ async def upload_camera_image(
     Menyimpan foto terbaru, mencatat ke tabel camera_snapshots (PRD B-10 & 13.1), dan broadcast WebSocket.
     """
     allowed_exts = (".jpg", ".jpeg", ".png")
+    safe_filename = (file.filename or "").lower()
     is_valid_type = (file.content_type in ["image/jpeg", "image/jpg", "image/png"]) or any(
-        file.filename.lower().endswith(ext) for ext in allowed_exts
+        safe_filename.endswith(ext) for ext in allowed_exts
     )
     if not is_valid_type:
         raise HTTPException(
@@ -733,11 +769,16 @@ async def upload_camera_image(
     area_clean = "hopper" if "hopper" in area.lower() else "kolam"
     target_filename = "hopper_latest.jpg" if area_clean == "hopper" else "pond_latest.jpg"
 
-    contents = await file.read()
+    contents = await file.read(MAX_CAMERA_UPLOAD_BYTES + 1)
     if len(contents) == 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File foto kosong (0 bytes)."
+        )
+    if len(contents) > MAX_CAMERA_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=getattr(status, "HTTP_413_CONTENT_TOO_LARGE", 413),
+            detail="Ukuran file foto melebihi batas maksimal 5 MB."
         )
 
     # Simpan ke frontend/public/camera/
@@ -896,21 +937,21 @@ async def create_schedule(item: ScheduleCreate, db: Session = Depends(get_db)):
     )
 
 @app.put("/api/schedules/{schedule_id}")
-async def update_schedule(schedule_id: int, updated: dict, db: Session = Depends(get_db)):
+async def update_schedule(schedule_id: int, updated: ScheduleUpdate, db: Session = Depends(get_db)):
     sched = db.query(ScheduleModel).filter_by(id=schedule_id).first()
     if not sched:
         raise HTTPException(status_code=404, detail="Jadwal tidak ditemukan")
 
-    if "time" in updated:
-        sched.time = updated["time"]
-    if "duration_ms" in updated:
-        sched.duration_ms = int(updated["duration_ms"])
-    if "days" in updated:
-        sched.days = updated["days"]
-    if "enabled" in updated:
-        sched.enabled = bool(updated["enabled"])
-    if "synced" in updated:
-        sched.synced = bool(updated["synced"])
+    if updated.time is not None:
+        sched.time = updated.time
+    if updated.duration_ms is not None:
+        sched.duration_ms = updated.duration_ms
+    if updated.days is not None:
+        sched.days = updated.days
+    if updated.enabled is not None:
+        sched.enabled = updated.enabled
+    if updated.synced is not None:
+        sched.synced = updated.synced
 
     db.commit()
 
@@ -966,6 +1007,13 @@ def get_thresholds(db: Session = Depends(get_db)):
 
 @app.put("/api/thresholds")
 async def update_thresholds(cfg: ThresholdsConfig, db: Session = Depends(get_db)):
+    global current_thresholds
+    if cfg.temp_min >= cfg.temp_max:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Suhu minimum harus lebih kecil dari suhu maksimum."
+        )
+
     t = db.query(ThresholdModel).filter_by(id=1).first()
     if not t:
         t = ThresholdModel(id=1)
@@ -978,6 +1026,11 @@ async def update_thresholds(cfg: ThresholdsConfig, db: Session = Depends(get_db)
     t.offline_after_s = cfg.offline_after_s
     t.camera_interval_s = cfg.camera_interval_s
     db.commit()
+
+    # Sinkronkan state in-memory dan kirim ke ESP8266 via MQTT
+    current_thresholds = cfg
+    if mqtt_connected:
+        mqtt_client.publish(TOPIC_THRESHOLDS, json.dumps(cfg.model_dump()), retain=True)
 
     await ws_manager.broadcast({
         "type": "thresholds_updated",
@@ -1037,6 +1090,7 @@ def acknowledge_alert(alert_id: int, db: Session = Depends(get_db)):
 @app.websocket("/ws")
 @app.websocket("/ws/telemetry")
 async def websocket_telemetry_endpoint(websocket: WebSocket):
+    global last_feed_epoch_s
     await ws_manager.connect(websocket)
     try:
         while True:
@@ -1049,27 +1103,89 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
                 if action == "ping":
                     await websocket.send_json({"type": "pong", "time": time.time()})
                 elif action == "feed":
-                    duration = int(msg.get("duration_ms", 2000))
-                    # Lakukan aksi pakan
-                    if current_telemetry.level_ok:
-                        log_entry = {
-                            "id": int(time.time() * 1000),
-                            "timestamp": time.strftime("%d %b %Y %H:%M:%S"),
-                            "source": "Manual (WebSocket PWA)",
-                            "duration_ms": duration,
-                            "result": "done",
-                            "reason": f"Selesai: Servo berputar {duration}ms via WS"
-                        }
-                        feed_logs_db.insert(0, log_entry)
-                        await ws_manager.broadcast({
-                            "type": "feed_event",
-                            "data": log_entry
-                        })
-                    else:
+                    try:
+                        duration = max(500, min(5000, int(msg.get("duration_ms", 2000))))
+                    except (TypeError, ValueError):
+                        duration = 2000
+                    bypass_cooldown = bool(msg.get("bypass_cooldown", False))
+                    source_str = str(msg.get("source", "Manual (WebSocket PWA)"))[:50]
+
+                    # Proteksi 1: Level air
+                    if not current_telemetry.level_ok:
+                        with SessionLocal() as db_session:
+                            skipped_log = FeedLogModel(
+                                timestamp_str=time.strftime("%d %b %Y %H:%M:%S"),
+                                source=source_str,
+                                duration_ms=duration,
+                                result="skipped",
+                                reason="Gagal: Level air kolam terdeteksi di bawah batas aman (Float Switch GPIO14)"
+                            )
+                            db_session.add(skipped_log)
+                            db_session.commit()
+                            db_session.refresh(skipped_log)
+                            log_entry = {
+                                "id": skipped_log.id,
+                                "timestamp": skipped_log.timestamp_str,
+                                "source": skipped_log.source,
+                                "duration_ms": skipped_log.duration_ms,
+                                "result": skipped_log.result,
+                                "reason": skipped_log.reason
+                            }
+                        await ws_manager.broadcast({"type": "feed_event", "data": log_entry})
                         await websocket.send_json({
                             "type": "error",
                             "message": "Level air kolam terlalu rendah. Pakan dibatalkan."
                         })
+                        continue
+
+                    # Proteksi 2: Jeda minimal antar pakan
+                    min_gap_sec = current_thresholds.min_gap_min * 60
+                    time_since_last = time.time() - last_feed_epoch_s
+                    if last_feed_epoch_s > 0 and time_since_last < min_gap_sec and not bypass_cooldown:
+                        rem_sec = int(min_gap_sec - time_since_last)
+                        rem_min = rem_sec // 60
+                        rem_s = rem_sec % 60
+                        await websocket.send_json({
+                            "type": "error",
+                            "message": f"Pemberian pakan ditolak: Jeda pengaman masih aktif ({rem_min}m {rem_s}s tersisa)."
+                        })
+                        continue
+
+                    # Kirim perintah putar servo ke MQTT jika terhubung
+                    payload = json.dumps({
+                        "action": "feed",
+                        "duration_ms": duration,
+                        "timestamp": int(time.time() * 1000)
+                    })
+                    if mqtt_connected:
+                        mqtt_client.publish(TOPIC_FEED_CMD, payload, qos=1)
+                        logger.info(f"Published WS feed command to MQTT: {payload}")
+
+                    with SessionLocal() as db_session:
+                        done_log = FeedLogModel(
+                            timestamp_str=time.strftime("%d %b %Y %H:%M:%S"),
+                            source=source_str,
+                            duration_ms=duration,
+                            result="done",
+                            reason=f"Selesai: Servo berputar {duration}ms via WS"
+                        )
+                        db_session.add(done_log)
+                        db_session.commit()
+                        db_session.refresh(done_log)
+                        last_feed_epoch_s = time.time()
+                        log_entry = {
+                            "id": done_log.id,
+                            "timestamp": done_log.timestamp_str,
+                            "source": done_log.source,
+                            "duration_ms": done_log.duration_ms,
+                            "result": done_log.result,
+                            "reason": done_log.reason
+                        }
+
+                    await ws_manager.broadcast({
+                        "type": "feed_event",
+                        "data": log_entry
+                    })
             except json.JSONDecodeError:
                 pass
     except WebSocketDisconnect:

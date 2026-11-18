@@ -45,6 +45,7 @@ const PRESET_CONDITIONS = {
 
 export function WaterClarityAnalyzer({
   onAddCareNote,
+  onNavigateToWaterChange,
   triggerHaptic,
   cameraImageSrc = '/camera/pond_latest.jpg'
 }) {
@@ -271,7 +272,7 @@ export function WaterClarityAnalyzer({
               </span>
             </h2>
             <p className="card-subtitle">
-              Pemeriksaan kekeruhan air &amp; deteksi alga otomatis berbasis ketajaman citra (*Laplacian Variance*)
+              Pemeriksaan kekeruhan air &amp; deteksi alga otomatis berbasis ketajaman citra (<em>Laplacian Variance</em>)
             </p>
           </div>
         </div>
@@ -368,10 +369,17 @@ export function WaterClarityAnalyzer({
 
             {analysis.score < 50 && (
               <div className="clarity-alert-action">
-                <a href="#sec-aquarium-care" className="btn-action-wc">
+                <button
+                  type="button"
+                  className="btn-action-wc"
+                  onClick={() => {
+                    if (triggerHaptic) triggerHaptic(30)
+                    if (onNavigateToWaterChange) onNavigateToWaterChange()
+                  }}
+                >
                   <Droplets size={14} />
                   <span>Jadwalkan Ganti Air (Water Change)</span>
-                </a>
+                </button>
               </div>
             )}
           </div>

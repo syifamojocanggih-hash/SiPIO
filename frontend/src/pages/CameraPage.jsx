@@ -25,6 +25,7 @@ export function CameraPage({
   snapshotHistory,
   onCaptureSnapshot,
   onAddCareNote,
+  onNavigate,
   triggerHaptic
 }) {
   const [monitorCountdown, setMonitorCountdown] = useState(0)
@@ -68,9 +69,22 @@ export function CameraPage({
   const remSec = remainingCooldownSeconds % 60
   const formattedCooldown = `${String(remMin).padStart(2, '0')}:${String(remSec).padStart(2, '0')}`
 
-  const handleFeedAndMonitor = () => {
+  const handleFeedAndMonitor = async () => {
     if (isWaterLow || isCooldownActive || monitorCountdown > 0) return
     if (triggerHaptic) triggerHaptic(50)
+
+    if (onTriggerFeed) {
+      const res = await onTriggerFeed({
+        source: 'Manual (Kamera)',
+        duration_ms: thresholds?.default_duration_ms || 2000,
+        result: 'done',
+        reason: 'Pemberian pakan & observasi visual dari halaman Kamera'
+      })
+      if (res && res.success === false) {
+        alert(res.error || 'Pemberian pakan ditolak oleh server.')
+        return
+      }
+    }
 
     const ts = Date.now()
     if (onCaptureSnapshot) {
@@ -82,16 +96,19 @@ export function CameraPage({
       })
     }
 
-    if (onTriggerFeed) {
-      onTriggerFeed({
-        source: 'Manual (Kamera)',
-        duration_ms: thresholds?.default_duration_ms || 2000,
-        result: 'done',
-        reason: 'Pemberian pakan & observasi visual dari halaman Kamera'
-      })
-    }
-
     setMonitorCountdown(10)
+  }
+
+  const handleNavigateToWaterChange = () => {
+    if (onNavigate) {
+      onNavigate('feeder')
+      setTimeout(() => {
+        const el = document.getElementById('sec-aquarium-care')
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 120)
+    }
   }
 
   const handleQuickObservation = (label) => {
@@ -156,6 +173,7 @@ export function CameraPage({
       {/* 3. Analisis Kejernihan Air Kolam (Computer Vision Optik Tanpa AI Berat) */}
       <WaterClarityAnalyzer
         onAddCareNote={onAddCareNote}
+        onNavigateToWaterChange={handleNavigateToWaterChange}
         triggerHaptic={triggerHaptic}
         cameraImageSrc="/camera/pond_latest.jpg"
       />

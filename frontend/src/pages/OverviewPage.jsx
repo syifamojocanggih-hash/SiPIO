@@ -371,16 +371,21 @@ export function OverviewPage({
     ? Math.min(100, Math.max(4, ((totalCooldownSeconds - remainingCooldownSeconds) / totalCooldownSeconds) * 100))
     : 100
 
-  const handleQuickFeed = () => {
+  const handleQuickFeed = async () => {
     if (!onTriggerFeed || isCooldownActive || !isWaterOk || isQuickFeeding) return
     if (triggerHaptic) triggerHaptic(45)
     setIsQuickFeeding(true)
-    onTriggerFeed({
+    const res = await onTriggerFeed({
       source: 'Manual (Ringkasan)',
-      duration_ms: 2000,
+      duration_ms: thresholds?.default_duration_ms || 2000,
       result: 'done',
       reason: 'Pemberian pakan cepat dari halaman ringkasan'
     })
+    if (res && res.success === false) {
+      setIsQuickFeeding(false)
+      alert(res.error || 'Pemberian pakan ditolak oleh server.')
+      return
+    }
     setTimeout(() => setIsQuickFeeding(false), 1200)
   }
 

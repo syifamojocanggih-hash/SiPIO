@@ -100,7 +100,7 @@ export function AquariumCareCard({
   }
 
   return (
-    <section className="care-grid" aria-label="Stok Pelet dan Perawatan Akuarium">
+    <section id="sec-aquarium-care" className="care-grid" aria-label="Stok Pelet dan Perawatan Akuarium">
       {/* Panel 1: Pelacak Stok Pelet Harian */}
       <article className="card care-card">
         <div className="card-header" style={{ flexWrap: 'wrap' }}>

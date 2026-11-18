@@ -79,7 +79,7 @@ export function FeedActionCard({
     return `${hours}:${mins} WIB`
   }, [effectiveLastFeedTime])
 
-  const handleFeedClick = () => {
+  const handleFeedClick = async () => {
     if (isWaterLow) {
       alert('Tindakan Dibatalkan: Level air kolam terdeteksi rendah. Untuk keselamatan ikan dan peralatan, pakan ditunda.')
       return
@@ -97,40 +97,43 @@ export function FeedActionCard({
       if (!confirmTemp) return
     }
 
-    // Trigger feeding sequence
+    // Kirim perintah pakan terlebih dahulu & validasi respons backend sebelum menampilkan animasi aktif
     setFeedingState('sending')
     triggerHaptic(60)
 
-    // Simulate MQTT send & response
-    setTimeout(() => {
-      setFeedingState('active')
-      const totalSeconds = duration / 1000
-      setRemainingTime(totalSeconds)
+    const result = await onTriggerFeed({
+      source: 'Manual (Dashboard)',
+      duration_ms: duration,
+      result: 'done',
+      reason: 'Diberikan manual via tombol feeder'
+    })
 
-      const interval = setInterval(() => {
-        setRemainingTime((prev) => {
-          if (prev <= 0.2) {
-            clearInterval(interval)
-            setFeedingState('completed')
-            triggerHaptic(100)
-            
-            // Record to log & start the 30-minute cooldown
-            onTriggerFeed({
-              source: 'Manual (Dashboard)',
-              duration_ms: duration,
-              result: 'done',
-              reason: 'Diberikan manual via tombol feeder'
-            })
+    if (result && result.success === false) {
+      setFeedingState('idle')
+      alert(result.error || 'Pemberian pakan ditolak oleh server.')
+      return
+    }
 
-            setTimeout(() => {
-              setFeedingState('idle')
-            }, 1000)
-            return 0
-          }
-          return +(prev - 0.2).toFixed(1)
-        })
-      }, 200)
-    }, 600)
+    // Perintah diterima: tampilkan durasi putaran servo secara visual
+    setFeedingState('active')
+    const totalSeconds = duration / 1000
+    setRemainingTime(totalSeconds)
+
+    const interval = setInterval(() => {
+      setRemainingTime((prev) => {
+        if (prev <= 0.2) {
+          clearInterval(interval)
+          setFeedingState('completed')
+          triggerHaptic(100)
+
+          setTimeout(() => {
+            setFeedingState('idle')
+          }, 1000)
+          return 0
+        }
+        return +(prev - 0.2).toFixed(1)
+      })
+    }, 200)
   }
 
   return (

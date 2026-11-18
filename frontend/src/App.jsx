@@ -91,10 +91,10 @@ export default function App() {
     sortSchedulesByTime(readStoredJson('sipio_schedules', INITIAL_SCHEDULES))
   )
 
-  // Persist schedules to localStorage whenever they change
+  // Persist schedules to localStorage whenever they change (termasuk saat kosong)
   useEffect(() => {
     try {
-      if (Array.isArray(schedules) && schedules.length > 0) {
+      if (Array.isArray(schedules)) {
         localStorage.setItem('sipio_schedules', JSON.stringify(schedules))
       }
     } catch {}
@@ -108,7 +108,7 @@ export default function App() {
   // Persist feedLogs to localStorage whenever they change
   useEffect(() => {
     try {
-      if (Array.isArray(feedLogs) && feedLogs.length > 0) {
+      if (Array.isArray(feedLogs)) {
         localStorage.setItem('sipio_feed_logs', JSON.stringify(feedLogs))
       }
     } catch {}
@@ -640,7 +640,6 @@ export default function App() {
 
   // Active alerts list (D-07)
   const [dismissedAlertIds, setDismissedAlertIds] = useState([])
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   // Apply theme to document element
   useEffect(() => {
@@ -782,16 +781,15 @@ export default function App() {
       finalFeedEvent.reason = 'Eksekusi porsi pakan hemat 20% selama masa liburan akuarium'
     }
 
-    // Catat waktu pakan terkini untuk memulai countdown 30 menit
-    const now = Date.now()
-    setLastFeedTimestamp(now)
-    try {
-      localStorage.setItem('sipio_last_feed_time', now.toString())
-    } catch {}
-
     if (iotConnection.backendOnline) {
       try {
         const res = await iotConnection.triggerRemoteFeed(finalFeedEvent.duration_ms, finalFeedEvent.source)
+        const now = Date.now()
+        setLastFeedTimestamp(now)
+        try {
+          localStorage.setItem('sipio_last_feed_time', now.toString())
+        } catch {}
+
         if (res.log) {
           setFeedLogs((prev) => {
             if (prev.some((p) => p.id === res.log.id)) return prev
@@ -801,13 +799,23 @@ export default function App() {
             consumeHopperGrams(res.log.duration_ms, res.log.id)
           }
         }
-        return
+        return { success: true, log: res.log }
       } catch (err) {
-        console.warn('[SiPIO] Gagal mengirim pakan ke backend, beralih ke simulasi lokal:', err)
+        // Jika backend menolak secara sah (4xx, mis. cooldown aktif / air rendah), jangan buat log palsu
+        if (err && err.status >= 400 && err.status < 500) {
+          return { success: false, rejected: true, error: err.message }
+        }
+        console.warn('[SiPIO] Gagal menghubungi backend, beralih ke simulasi lokal:', err)
       }
     }
 
-    // Local simulation fallback
+    // Local simulation fallback (hanya jika backend offline / tidak dapat dijangkau)
+    const now = Date.now()
+    setLastFeedTimestamp(now)
+    try {
+      localStorage.setItem('sipio_last_feed_time', now.toString())
+    } catch {}
+
     const nowObj = new Date()
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
     const day = String(nowObj.getDate()).padStart(2, '0')
@@ -824,6 +832,7 @@ export default function App() {
     if (newEntry.result === 'done') {
       consumeHopperGrams(newEntry.duration_ms, newEntry.id)
     }
+    return { success: true, local: true, log: newEntry }
   }
 
   // Handler to reset all simulation data back to initial state
@@ -941,6 +950,7 @@ export default function App() {
             snapshotHistory={snapshotHistory}
             onCaptureSnapshot={handleCaptureSnapshot}
             onAddCareNote={handleAddCareNote}
+            onNavigate={setActiveTab}
             triggerHaptic={pwaState.triggerHaptic}
           />
         )}
@@ -977,17 +987,7 @@ export default function App() {
         )}
       </main>
 
-      {/* 5. Settings Modal (D-06) */}
-      {isSettingsOpen && (
-        <SettingsModal
-          thresholds={thresholds}
-          onSave={handleSaveThresholds}
-          onClose={() => setIsSettingsOpen(false)}
-          triggerHaptic={pwaState.triggerHaptic}
-        />
-      )}
-
-      {/* 6. PWA Guided Install Modal for iOS & Android */}
+      {/* 5. PWA Guided Install Modal for iOS & Android */}
       {pwaState.isInstallModalOpen && (
         <PWAInstallModal
           pwaState={pwaState}

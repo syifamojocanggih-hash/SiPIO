@@ -30,13 +30,15 @@ async function fetchJson(endpoint, options = {}) {
       signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
-        ...(options.headers || {})
+        ...options.headers
       }
     })
 
     if (!res.ok) {
       const errorBody = await res.json().catch(() => ({}))
-      throw new Error(errorBody.detail || errorBody.message || `HTTP ${res.status}: ${res.statusText}`)
+      const err = new Error(errorBody.detail || errorBody.message || `HTTP ${res.status}: ${res.statusText}`)
+      err.status = res.status
+      throw err
     }
 
     return await res.json()
